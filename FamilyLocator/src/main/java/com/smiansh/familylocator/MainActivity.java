@@ -30,7 +30,7 @@ public class MainActivity extends AppCompatActivity {
 
     private FirebaseFirestore db = FirebaseFirestore.getInstance();
     private FirebaseAuth mAuth;
-    private FirebaseUser currentUser;
+    private FirebaseUser userId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,16 +43,19 @@ public class MainActivity extends AppCompatActivity {
         username = findViewById(R.id.email);
         pass = findViewById(R.id.pass);
 
-        currentUser = mAuth.getCurrentUser();
+        userId = mAuth.getCurrentUser();
 
         mAuth.addAuthStateListener(new FirebaseAuth.AuthStateListener() {
             @Override
             public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
                 FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
                 if (user != null) {
-                    int permission = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION);
-                    if (permission != PackageManager.PERMISSION_GRANTED) {
-                        requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    int fine_location = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION);
+                    int coarse_location = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION);
+                    if (fine_location != PackageManager.PERMISSION_GRANTED &&
+                            coarse_location != PackageManager.PERMISSION_GRANTED) {
+                        requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION},
                                 PERMISSION_REQUEST);
                     } else {
                         startMapActivity(user.getUid());
@@ -73,10 +76,10 @@ public class MainActivity extends AppCompatActivity {
 //                Log.i(TAG, "User interaction was cancelled.");
 
             } else if ((grantResults[0] == PackageManager.PERMISSION_GRANTED)
-//                    && (grantResults[1] == PackageManager.PERMISSION_GRANTED)
+                    && (grantResults[1] == PackageManager.PERMISSION_GRANTED)
             ) {
                 // Permission was granted.
-//                requestLocationUpdates(null);
+                startMapActivity(userId.getUid());
 
             } else {
                 // Permission denied.

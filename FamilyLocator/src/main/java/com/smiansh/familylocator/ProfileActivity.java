@@ -21,6 +21,7 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -30,7 +31,7 @@ public class ProfileActivity extends AppCompatActivity {
     private static final int PERMISSION_REQUEST = 10;
     private TextView currUser;
     private EditText firstName, lastName, phone;
-    private Button update;
+    private Button update, addMember;
     private FirebaseFirestore db = FirebaseFirestore.getInstance();
     private String userId;
 
@@ -111,7 +112,7 @@ public class ProfileActivity extends AppCompatActivity {
                 data.put("lastName", lastName.getText().toString());
                 data.put("phone", phone.getText().toString());
                 DocumentReference docRef = db.collection("users").document(userId);
-                docRef.set(data).addOnFailureListener(new OnFailureListener() {
+                docRef.set(data, SetOptions.merge()).addOnFailureListener(new OnFailureListener() {
                     @Override
                     public void onFailure(@NonNull Exception e) {
                         Toast.makeText(ProfileActivity.this, e.toString(), Toast.LENGTH_SHORT).show();
@@ -140,6 +141,7 @@ public class ProfileActivity extends AppCompatActivity {
         phone = findViewById(R.id.phone);
         update = findViewById(R.id.update);
         currUser = findViewById(R.id.currUser);
+        addMember = findViewById(R.id.addMember);
 
         int permission = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION);
         if (permission != PackageManager.PERMISSION_GRANTED) {
