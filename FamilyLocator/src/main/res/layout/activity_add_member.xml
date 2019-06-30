@@ -7,11 +7,11 @@
     tools:context=".AddMemberActivity">
 
     <EditText
-        android:id="@+id/number"
+        android:id="@+id/authCode"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="10 Digit Mobile Number"
-        android:inputType="phone" />
+        android:inputType="text" />
 
     <Button
         android:id="@+id/addButton"

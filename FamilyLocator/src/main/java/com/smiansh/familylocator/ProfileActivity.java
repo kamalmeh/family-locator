@@ -1,7 +1,9 @@
 package com.smiansh.familylocator;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -48,10 +50,10 @@ public class ProfileActivity extends AppCompatActivity {
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 if (charSequence.length() == 0) {
                     update.setEnabled(false);
-                    firstName.setHintTextColor(getResources().getColor(R.color.requiredField, null));
+                    firstName.setHintTextColor(Color.RED);
                 } else {
                     update.setEnabled(true);
-                    firstName.setHintTextColor(getResources().getColor(R.color.normal, null));
+                    firstName.setHintTextColor(Color.BLACK);
                 }
             }
 
@@ -70,10 +72,10 @@ public class ProfileActivity extends AppCompatActivity {
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 if (charSequence.length() == 0) {
                     update.setEnabled(false);
-                    lastName.setHintTextColor(getResources().getColor(R.color.requiredField, null));
+                    firstName.setHintTextColor(Color.RED);
                 } else {
                     update.setEnabled(true);
-                    lastName.setHintTextColor(getResources().getColor(R.color.normal, null));
+                    firstName.setHintTextColor(Color.BLACK);
                 }
             }
 
@@ -92,10 +94,10 @@ public class ProfileActivity extends AppCompatActivity {
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 if (charSequence.length() == 0) {
                     update.setEnabled(false);
-                    phone.setHintTextColor(getResources().getColor(R.color.requiredField, null));
+                    firstName.setHintTextColor(Color.RED);
                 } else {
                     update.setEnabled(true);
-                    phone.setHintTextColor(getResources().getColor(R.color.normal, null));
+                    firstName.setHintTextColor(Color.BLACK);
                 }
             }
 
@@ -128,6 +130,14 @@ public class ProfileActivity extends AppCompatActivity {
                 finish();
             }
         });
+
+        addMember.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(ProfileActivity.this, AddMemberActivity.class);
+                startActivity(intent);
+            }
+        });
     }
 
     @Override
@@ -143,12 +153,12 @@ public class ProfileActivity extends AppCompatActivity {
         currUser = findViewById(R.id.currUser);
         addMember = findViewById(R.id.addMember);
 
-        int permission = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION);
+        int permission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
         if (permission != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                     PERMISSION_REQUEST);
         } else {
-            finish();
+            //finish();
         }
 
         db.collection("users").document(userId).get()

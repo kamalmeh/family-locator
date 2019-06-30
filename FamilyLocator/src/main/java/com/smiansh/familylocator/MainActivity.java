@@ -1,6 +1,7 @@
 package com.smiansh.familylocator;
 
 import android.Manifest;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -13,6 +14,8 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -43,6 +46,13 @@ public class MainActivity extends AppCompatActivity {
         username = findViewById(R.id.email);
         pass = findViewById(R.id.pass);
 
+        ComponentName receiver = new ComponentName(this, LocationUpdates.class);
+        PackageManager pm = getPackageManager();
+
+        pm.setComponentEnabledSetting(receiver,
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                PackageManager.DONT_KILL_APP);
+
         userId = mAuth.getCurrentUser();
 
         mAuth.addAuthStateListener(new FirebaseAuth.AuthStateListener() {
@@ -50,11 +60,11 @@ public class MainActivity extends AppCompatActivity {
             public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
                 FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
                 if (user != null) {
-                    int fine_location = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION);
-                    int coarse_location = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION);
+                    int fine_location = ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION);
+                    int coarse_location = ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION);
                     if (fine_location != PackageManager.PERMISSION_GRANTED &&
                             coarse_location != PackageManager.PERMISSION_GRANTED) {
-                        requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
+                        ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
                                         Manifest.permission.ACCESS_COARSE_LOCATION},
                                 PERMISSION_REQUEST);
                     } else {

@@ -5,19 +5,19 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <Button
-        android:id="@+id/addMember"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Add your family member phone"
-        android:text="Add Member" />
+    <!--<Button-->
+    <!--android:id="@+id/addMember"-->
+    <!--android:layout_width="match_parent"-->
+    <!--android:layout_height="wrap_content"-->
+    <!--android:hint="Add your family member phone"-->
+    <!--android:text="Add Member" />-->
 
-    <Button
-        android:id="@+id/shareButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Click if you want to share your location with your family member"
-        android:text="Share my location" />
+    <!--<Button-->
+    <!--android:id="@+id/shareButton"-->
+    <!--android:layout_width="match_parent"-->
+    <!--android:layout_height="wrap_content"-->
+    <!--android:hint="Click if you want to share your location with your family member"-->
+    <!--android:text="Share my location" />-->
 
     <fragment
         android:id="@+id/map"

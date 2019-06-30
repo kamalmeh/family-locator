@@ -6,32 +6,39 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -41,24 +48,116 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
-import com.google.firebase.firestore.SetOptions;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback {
-
     private static final int PERMISSION_REQUEST = 10;
     private GoogleMap mMap;
-    private CircleOptions circleOptions;
     private FusedLocationProviderClient fusedLocationProviderClient;
     private LocationRequest locationRequest;
     private static final String ALPHA_NUMERIC_STRING = "0123456789" +
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ" + "abcdefghijklmnopqrstuvwxyz";
     private LocationManager locationManager;
-    private Button addMember, shareButton;
     private String userId;
-    private FirebaseFirestore db = FirebaseFirestore.getInstance();
+    final static long REFRESH = 10 * 1000;
+    private FirebaseFirestore db;
+    private Map<String, Marker> markers;
+    private float zoomLevel;
+    private Location myLocation;
+    private LocationHandler locationHandler;
+    private LocationCallback locationCallback;
+    private LocationListener locationListener;
+
+    public MapsActivity() {
+        initialize();
+    }
+
+    protected void initialize() {
+        zoomLevel = 15;
+        userId = Objects.requireNonNull(FirebaseAuth.getInstance().getCurrentUser()).getUid();
+        db = FirebaseFirestore.getInstance();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        initialize();
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        Toast.makeText(this, "Selected Item: " + item.getTitle(), Toast.LENGTH_SHORT).show();
+        switch (item.getItemId()) {
+            case R.id.updateProfile:
+                Intent intentProfile = new Intent(this, ProfileActivity.class);
+                intentProfile.putExtra("userId", userId);
+                startActivity(intentProfile);
+                break;
+            case R.id.addMember:
+                Intent intentAddMember = new Intent(this, AddMemberActivity.class);
+                intentAddMember.putExtra("userId", userId);
+                startActivity(intentAddMember);
+                break;
+            case R.id.shareLocation:
+                final DocumentReference docRef = db.collection("users").document(userId);
+                docRef.get()
+                        .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                            @Override
+                            public void onSuccess(DocumentSnapshot documentSnapshot) {
+                                SimpleDateFormat format = new SimpleDateFormat("ddMMyyyyHHmmss", Locale.getDefault());
+                                Map<String, Object> data = documentSnapshot.getData();
+                                String authCode = documentSnapshot.getString("authCode");
+                                String timestamp = documentSnapshot.getString("authCodeTimestamp");
+                                if (timestamp == null && authCode == null) {
+                                    authCode = randomAlphaNumeric(6);
+                                    timestamp = "00000101000000";
+                                }
+                                Date D1 = null;
+                                try {
+                                    assert timestamp != null;
+                                    D1 = format.parse(timestamp);
+                                } catch (ParseException e1) {
+                                    e1.printStackTrace();
+                                }
+                                Date D2 = new Date();
+                                assert D1 != null;
+                                long diff = D2.getTime() - D1.getTime();
+                                long limit = 7 * 24 * 60 * 60; //7 days
+
+                                if (diff > limit) {
+                                    authCode = randomAlphaNumeric(6);
+                                    assert data != null;
+                                    data.put("authCode", authCode);
+                                    data.put("authCodeTimestamp", format.format(new Date()));
+                                    docRef.update(data);
+                                }
+                                Intent intent = new Intent(MapsActivity.this, ShareCodeActivity.class);
+                                intent.putExtra("authCode", authCode);
+                                startActivity(intent);
+                            }
+                        })
+                        .addOnFailureListener(new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                Toast.makeText(MapsActivity.this, e.toString(), Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                Intent intentShareLocation = new Intent(this, ShareCodeActivity.class);
+                intentShareLocation.putExtra("userId", userId);
+                startActivity(intentShareLocation);
+                break;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+        return super.onOptionsItemSelected(item);
+    }
 
     public static String randomAlphaNumeric(int count) {
         StringBuilder builder = new StringBuilder();
@@ -79,33 +178,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     protected void onStart() {
         super.onStart();
-        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_REQUEST);
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_REQUEST);
         }
         requestLocationUpdates(null);
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        Toast.makeText(this, "Selected Item: " + item.getTitle(), Toast.LENGTH_SHORT).show();
-        switch (item.getItemId()) {
-            case R.id.signout:
-//                PackageManager pm = this.getPackageManager();
-//                ComponentName componentName = new ComponentName(this, LocationUpdates.class);
-//                pm.setComponentEnabledSetting(componentName, PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-//                        PackageManager.DONT_KILL_APP);
-                FirebaseAuth.getInstance().signOut();
-                startActivity(new Intent(this, MainActivity.class));
-                finish();
-                return super.onOptionsItemSelected(item);
-            case R.id.updateProfile:
-                Intent intent = new Intent(this, ProfileActivity.class);
-                intent.putExtra("userId", userId);
-                startActivity(intent);
-                finish();
-            default:
-                return super.onOptionsItemSelected(item);
-        }
     }
 
     @Override
@@ -115,49 +191,125 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
-        addMember = findViewById(R.id.addMember);
-        userId = this.getIntent().getStringExtra("userId");
-        addMember.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(MapsActivity.this, AddMemberActivity.class);
-                intent.putExtra("userId", userId);
-                startActivity(intent);
-            }
-        });
+        try {
+            assert mapFragment != null;
+            mapFragment.getMapAsync(this);
+        } catch (NullPointerException e) {
+            e.printStackTrace();
+        }
 
-        shareButton = findViewById(R.id.shareButton);
-        shareButton.setOnClickListener(new View.OnClickListener() {
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
+        prepareLocationRequest();
+
+        locationHandler = new LocationHandler();
+        locationHandler.postDelayed(new Runnable() {
             @Override
-            public void onClick(View view) {
-                final DocumentReference docRef = db.collection("users").document(userId);
-                docRef.get()
+            public void run() {
+                locateFamily();
+                locateSelf();
+            }
+        }, 10000);
+        markers = new HashMap<>();
+
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(final LocationResult locationResult) {
+                super.onLocationResult(locationResult);
+                myLocation = locationResult.getLastLocation();
+                db.collection("users").document(userId).get()
                         .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
                             @Override
                             public void onSuccess(DocumentSnapshot documentSnapshot) {
-                                if (documentSnapshot.exists()) {
-                                    String authCode = randomAlphaNumeric(6);
-                                    if (authCode == null) {
-                                        Map<String, Object> data = new HashMap<>();
-                                        data.put(authCode, userId);
-                                        db.collection("users").document().set(data, SetOptions.merge());
-                                    }
-                                }
+                                String title = documentSnapshot.getString("firstName");
+                                assert title != null;
+                                setMarker(title, myLocation.getLatitude(), myLocation.getLongitude(), true);
                             }
                         })
                         .addOnFailureListener(new OnFailureListener() {
                             @Override
                             public void onFailure(@NonNull Exception e) {
-                                Toast.makeText(MapsActivity.this, e.toString(), Toast.LENGTH_SHORT).show();
+                                e.printStackTrace();
                             }
                         });
             }
+        };
+
+        locationListener = new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+                myLocation = location;
+                db.collection("users").document(userId).get()
+                        .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                            @Override
+                            public void onSuccess(DocumentSnapshot documentSnapshot) {
+                                String title = documentSnapshot.getString("firstName");
+                                assert title != null;
+                                setMarker(title, myLocation.getLatitude(), myLocation.getLongitude(), true);
+                            }
+                        })
+                        .addOnFailureListener(new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                e.printStackTrace();
+                            }
+                        });
+            }
+
+            @Override
+            public void onStatusChanged(String s, int i, Bundle bundle) {
+
+            }
+
+            @Override
+            public void onProviderEnabled(String s) {
+
+            }
+
+            @Override
+            public void onProviderDisabled(String s) {
+
+            }
+        };
+    }
+
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        mMap = googleMap;
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION},
+                    PERMISSION_REQUEST);
+        }
+
+        mMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
+            @Override
+            public void onMapLoaded() {
+                locateSelf();
+                locateFamily();
+            }
         });
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        prepareLocationRequest();
-        locateFamily();
+
+        mMap.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
+            @Override
+            public void onCameraMove() {
+                zoomLevel = mMap.getCameraPosition().zoom;
+            }
+        });
+
+        mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+            @Override
+            public boolean onMarkerClick(Marker marker) {
+                Toast.makeText(MapsActivity.this, marker.getTitle() + " clicked", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+        });
     }
 
     @Override
@@ -199,38 +351,16 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    @Override
-    public void onMapReady(GoogleMap googleMap) {
-        mMap = googleMap;
-        circleOptions = new CircleOptions()
-                .radius(100)
-                .strokeColor(Color.argb(30, 0, 16, 255))
-                .strokeWidth(1)
-                .fillColor(Color.argb(15, 0, 16, 255));
-
-        mMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
-            @Override
-            public void onMapLoaded() {
-                if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_REQUEST);
-                }
-                fusedLocationProviderClient.getLastLocation()
-                        .addOnSuccessListener(new OnSuccessListener<Location>() {
-                            @Override
-                            public void onSuccess(Location location) {
-                                if (location != null) {
-                                    //setMarker("OnMapReady", location.getLatitude(), location.getLongitude());
-                                }
-                            }
-                        })
-                        .addOnFailureListener(new OnFailureListener() {
-                            @Override
-                            public void onFailure(@NonNull Exception e) {
-                                Toast.makeText(MapsActivity.this, e.toString(), Toast.LENGTH_LONG).show();
-                            }
-                        });
-            }
-        });
+    public void setMarker(@NonNull String title, double latitude, double longitude, boolean center) {
+        LatLng markerPlace = new LatLng(latitude, longitude);
+        if (markers.containsKey(title)) {
+            markers.get(title).setPosition(markerPlace);
+        } else {
+            markers.put(title, mMap.addMarker(new MarkerOptions().position(markerPlace).title(title)));
+        }
+        if (center) {
+            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(markerPlace, zoomLevel));
+        }
     }
 
     public void prepareLocationRequest() {
@@ -241,61 +371,37 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         locationRequest.setMaxWaitTime(300 * 1000);       //300 Seconds = 5 Minutes
     }
 
-    public void setMarker(String title, double latitude, double longitude) {
-        mMap.clear();
-        LatLng markerPlace = new LatLng(latitude, longitude);
-        mMap.addMarker(new MarkerOptions().position(markerPlace).title(title));
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(markerPlace, 17));
-        mMap.addCircle(circleOptions.center(markerPlace));
-    }
-
     private PendingIntent getPendingIntent() {
-//        PackageManager pm = this.getPackageManager();
-//        ComponentName componentName = new ComponentName(this, LocationUpdates.class);
-//        pm.setComponentEnabledSetting(componentName, PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-//                PackageManager.DONT_KILL_APP);
         Intent intent = new Intent(this, LocationUpdates.class);
         intent.setAction(LocationUpdates.PROCESS_LOCATION_UPDATES);
-        //intent.putExtra("userId", userId);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         return PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     @SuppressLint("MissingPermission")
     public void requestLocationUpdates(View view) {
         try {
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 10, new android.location.LocationListener() {
-                @Override
-                public void onLocationChanged(Location location) {
-                    //UserNote.sendNotification(MapsActivity.this, "In Location Listener Callback");
-                    //("On requestLocationUpdates", location.getLatitude(), location.getLongitude());
-//                Toast.makeText(MapsActivity.this, location.toString(), Toast.LENGTH_SHORT).show();
-                    GeoPoint geoPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
-                    FirebaseFirestore db = FirebaseFirestore.getInstance();
-                    DocumentReference documentReference = db.collection("users").document(userId);
-                    Map<String, Object> data = new HashMap<>();
-                    data.put("location", geoPoint);
-                    documentReference.set(data, SetOptions.merge());
-                }
-
-                @Override
-                public void onStatusChanged(String s, int i, Bundle bundle) {
-
-                }
-
-                @Override
-                public void onProviderEnabled(String s) {
-
-                }
-
-                @Override
-                public void onProviderDisabled(String s) {
-
-                }
-            });
+            locateSelf();
             fusedLocationProviderClient.requestLocationUpdates(locationRequest, getPendingIntent());
         } catch (SecurityException e) {
             Toast.makeText(this, "Security Exception", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    public void locateSelf() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED &&
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
+                        != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]
+                            {Manifest.permission.ACCESS_COARSE_LOCATION,
+                                    Manifest.permission.ACCESS_FINE_LOCATION},
+                    PERMISSION_REQUEST);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
+        } else
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener, Looper.myLooper());
     }
 
     public void locateFamily() {
@@ -305,26 +411,31 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
                     @Override
                     public void onSuccess(DocumentSnapshot documentSnapshot) {
-                        HashMap<String, Object> family = (HashMap<String, Object>) documentSnapshot.get("family");
-                        for (Map.Entry<String, Object> entry : family.entrySet()) {
-                            DocumentReference memberRef = (DocumentReference) entry.getValue();
-                            final GeoPoint[] geoPoint = new GeoPoint[1];
-                            memberRef.get()
-                                    .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
-                                        @Override
-                                        public void onSuccess(DocumentSnapshot documentSnapshot) {
-                                            String firstName = documentSnapshot.getString("firstName");
-                                            geoPoint[0] = documentSnapshot.getGeoPoint("location");
-                                            setMarker(firstName, geoPoint[0].getLatitude(), geoPoint[0].getLongitude());
-                                        }
-                                    })
-                                    .addOnFailureListener(new OnFailureListener() {
-                                        @Override
-                                        public void onFailure(@NonNull Exception e) {
-                                            Log.i("locateFamily()", e.getMessage());
-                                        }
-                                    });
-                            //Log.i("LOCATE_FAMILY:"+entry.getKey(), entry.getValue().toString());
+                        try {
+                            @SuppressWarnings("unchecked") Map<String, Object> family = (Map<String, Object>) documentSnapshot.get("family");
+                            for (Map.Entry<String, Object> entry : Objects.requireNonNull(family).entrySet()) {
+                                DocumentReference memberRef = (DocumentReference) entry.getValue();
+                                final GeoPoint[] geoPoint = new GeoPoint[1];
+                                memberRef.get()
+                                        .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                                            @Override
+                                            public void onSuccess(DocumentSnapshot documentSnapshot) {
+                                                String firstName = documentSnapshot.getString("firstName");
+                                                geoPoint[0] = documentSnapshot.getGeoPoint("location");
+                                                assert firstName != null;
+                                                assert geoPoint[0] != null;
+                                                setMarker(firstName, geoPoint[0].getLatitude(), geoPoint[0].getLongitude(), false);
+                                            }
+                                        })
+                                        .addOnFailureListener(new OnFailureListener() {
+                                            @Override
+                                            public void onFailure(@NonNull Exception e) {
+                                                Log.i("locateFamily()", e.toString());
+                                            }
+                                        });
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
                         }
                     }
                 })
@@ -334,5 +445,22 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                     }
                 });
+        locationHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                locateFamily();
+                locateSelf();
+            }
+        }, 1000);
+    }
+
+    @SuppressLint("HandlerLeak")
+    private class LocationHandler extends Handler {
+        public void handleMessage(@NonNull Message msg) {
+            if (msg.what == 0) {
+                locateFamily();
+                this.sendEmptyMessageDelayed(0, REFRESH);
+            }
+        }
     }
 }

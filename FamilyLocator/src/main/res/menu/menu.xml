@@ -4,6 +4,12 @@
         android:id="@+id/updateProfile"
         android:title="Update Profile" />
     <item
-        android:id="@+id/signout"
-        android:title="SignOut" />
+        android:id="@+id/addMember"
+        android:title="Add Member" />
+    <item
+        android:id="@+id/shareLocation"
+        android:title="Share my Location" />
+    <!--<item-->
+    <!--android:id="@+id/signout"-->
+    <!--android:title="SignOut" />-->
 </menu>

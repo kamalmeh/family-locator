@@ -5,6 +5,8 @@
     <string name="ok">Ok</string>
     <string name="title_activity_maps">Map</string>
     <string name="unknown_location">Unknown location</string>
+    <string name="authDesc">Share this authentication code to your family member to join you</string>
+    <string name="authcode">Sample 6 Characters Auth Code</string>
     <plurals name="num_locations_reported">
         <item quantity="zero">No location reported</item>
         <item quantity="one">One location reported</item>
