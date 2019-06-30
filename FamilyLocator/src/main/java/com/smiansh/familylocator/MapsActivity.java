@@ -22,6 +22,8 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationRequest;
@@ -79,8 +81,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     protected void onStart() {
         super.onStart();
-        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_REQUEST);
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_REQUEST);
         }
         requestLocationUpdates(null);
     }
@@ -138,11 +140,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                             public void onSuccess(DocumentSnapshot documentSnapshot) {
                                 if (documentSnapshot.exists()) {
                                     String authCode = randomAlphaNumeric(6);
-                                    if (authCode == null) {
-                                        Map<String, Object> data = new HashMap<>();
-                                        data.put(authCode, userId);
-                                        db.collection("users").document().set(data, SetOptions.merge());
-                                    }
+                                    Map<String, Object> data = new HashMap<>();
+                                    data.put("userId", userId);
+                                    db.collection("authcodes").document(authCode).set(data);
+                                    data.clear();
+                                    data.put("authCode", authCode);
+                                    docRef.set(data, SetOptions.merge());
                                 }
                             }
                         })
@@ -211,8 +214,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         mMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
             @Override
             public void onMapLoaded() {
-                if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_REQUEST);
+                if (ContextCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(MapsActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_REQUEST);
                 }
                 fusedLocationProviderClient.getLastLocation()
                         .addOnSuccessListener(new OnSuccessListener<Location>() {
@@ -242,7 +245,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void setMarker(String title, double latitude, double longitude) {
-        mMap.clear();
+        //mMap.clear();
         LatLng markerPlace = new LatLng(latitude, longitude);
         mMap.addMarker(new MarkerOptions().position(markerPlace).title(title));
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(markerPlace, 17));
@@ -305,26 +308,30 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
                     @Override
                     public void onSuccess(DocumentSnapshot documentSnapshot) {
-                        HashMap<String, Object> family = (HashMap<String, Object>) documentSnapshot.get("family");
-                        for (Map.Entry<String, Object> entry : family.entrySet()) {
-                            DocumentReference memberRef = (DocumentReference) entry.getValue();
-                            final GeoPoint[] geoPoint = new GeoPoint[1];
-                            memberRef.get()
-                                    .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
-                                        @Override
-                                        public void onSuccess(DocumentSnapshot documentSnapshot) {
-                                            String firstName = documentSnapshot.getString("firstName");
-                                            geoPoint[0] = documentSnapshot.getGeoPoint("location");
-                                            setMarker(firstName, geoPoint[0].getLatitude(), geoPoint[0].getLongitude());
-                                        }
-                                    })
-                                    .addOnFailureListener(new OnFailureListener() {
-                                        @Override
-                                        public void onFailure(@NonNull Exception e) {
-                                            Log.i("locateFamily()", e.getMessage());
-                                        }
-                                    });
-                            //Log.i("LOCATE_FAMILY:"+entry.getKey(), entry.getValue().toString());
+                        try {
+                            HashMap<String, Object> family = (HashMap<String, Object>) documentSnapshot.get("family");
+                            for (Map.Entry<String, Object> entry : family.entrySet()) {
+                                DocumentReference memberRef = (DocumentReference) entry.getValue();
+                                final GeoPoint[] geoPoint = new GeoPoint[1];
+                                memberRef.get()
+                                        .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                                            @Override
+                                            public void onSuccess(DocumentSnapshot documentSnapshot) {
+                                                String firstName = documentSnapshot.getString("firstName");
+                                                geoPoint[0] = documentSnapshot.getGeoPoint("location");
+                                                setMarker(firstName, geoPoint[0].getLatitude(), geoPoint[0].getLongitude());
+                                            }
+                                        })
+                                        .addOnFailureListener(new OnFailureListener() {
+                                            @Override
+                                            public void onFailure(@NonNull Exception e) {
+                                                Log.i("locateFamily()", e.getMessage());
+                                            }
+                                        });
+                                //Log.i("LOCATE_FAMILY:"+entry.getKey(), entry.getValue().toString());
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
                         }
                     }
                 })

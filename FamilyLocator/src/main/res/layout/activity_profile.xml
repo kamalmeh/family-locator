@@ -63,10 +63,10 @@
         android:hint="Phone"
         android:inputType="phone" />
 
-    <RecyclerView
-        android:id="@+id/membersList"
-        android:layout_width="match_parent"
-        android:layout_height="250sp" />
+    <!--<RecyclerView-->
+    <!--android:id="@+id/membersList"-->
+    <!--android:layout_width="match_parent"-->
+    <!--android:layout_height="250sp" />-->
 
     <LinearLayout
         android:layout_width="match_parent"
