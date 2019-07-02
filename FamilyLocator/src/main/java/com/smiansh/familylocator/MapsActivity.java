@@ -48,6 +48,7 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
+import com.google.firebase.firestore.SetOptions;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -89,6 +90,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void onResume() {
         super.onResume();
         initialize();
+        locateSelf();
+        locateFamily();
     }
 
     @Override
@@ -111,6 +114,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
                             @Override
                             public void onSuccess(DocumentSnapshot documentSnapshot) {
+                                String oldAuthCode = null;
                                 SimpleDateFormat format = new SimpleDateFormat("ddMMyyyyHHmmss", Locale.getDefault());
                                 Map<String, Object> data = documentSnapshot.getData();
                                 String authCode = documentSnapshot.getString("authCode");
@@ -118,6 +122,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 if (timestamp == null && authCode == null) {
                                     authCode = randomAlphaNumeric(6);
                                     timestamp = "00000101000000";
+                                } else {
+                                    assert authCode != null;
+                                    oldAuthCode = authCode;
                                 }
                                 Date D1 = null;
                                 try {
@@ -129,7 +136,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 Date D2 = new Date();
                                 assert D1 != null;
                                 long diff = D2.getTime() - D1.getTime();
-                                long limit = 7 * 24 * 60 * 60; //7 days
+
+                                long limit = 7 * 24 * 60 * 60 * 1000; //7 days
 
                                 if (diff > limit) {
                                     authCode = randomAlphaNumeric(6);
@@ -137,6 +145,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                     data.put("authCode", authCode);
                                     data.put("authCodeTimestamp", format.format(new Date()));
                                     docRef.update(data);
+                                    data.clear();
+                                    data.put("userId", userId);
+                                    db.collection("authcodes").document(authCode).set(data, SetOptions.merge());
+                                    if (oldAuthCode != null) {
+                                        db.collection("authcodes").document(oldAuthCode).delete();
+                                    }
                                 }
                                 Intent intent = new Intent(MapsActivity.this, ShareCodeActivity.class);
                                 intent.putExtra("authCode", authCode);
@@ -459,6 +473,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         public void handleMessage(@NonNull Message msg) {
             if (msg.what == 0) {
                 locateFamily();
+                locateSelf();
                 this.sendEmptyMessageDelayed(0, REFRESH);
             }
         }
