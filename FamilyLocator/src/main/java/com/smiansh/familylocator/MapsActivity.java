@@ -459,6 +459,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         public void handleMessage(@NonNull Message msg) {
             if (msg.what == 0) {
                 locateFamily();
+                locateSelf();
                 this.sendEmptyMessageDelayed(0, REFRESH);
             }
         }
