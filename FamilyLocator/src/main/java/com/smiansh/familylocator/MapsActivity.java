@@ -71,6 +71,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private FirebaseFirestore db;
     private Map<String, Marker> markers;
     private float zoomLevel;
+    private boolean cameraChanged = false;
     private Location myLocation;
     private LocationHandler locationHandler;
     private LocationCallback locationCallback;
@@ -314,6 +315,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             @Override
             public void onCameraMove() {
                 zoomLevel = mMap.getCameraPosition().zoom;
+                cameraChanged = true;
             }
         });
 
@@ -372,7 +374,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         } else {
             markers.put(title, mMap.addMarker(new MarkerOptions().position(markerPlace).title(title)));
         }
-        if (center) {
+        if (center && !cameraChanged) {
             mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(markerPlace, zoomLevel));
         }
     }
@@ -465,7 +467,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 locateFamily();
                 locateSelf();
             }
-        }, 1000);
+        }, 10000);
     }
 
     @SuppressLint("HandlerLeak")

@@ -47,8 +47,8 @@ public class LocationUpdates extends BroadcastReceiver {
                             String userId = user.getUid();
 //                            Log.i(TAG,"current user: " + userId);
 //                            Toast.makeText(Ctx, userId + "\n" + location.getLatitude() + "," + location.getLongitude(), Toast.LENGTH_SHORT).show();
-//                            UserNote.sendNotification(context, "Location Details Updated: "
-//                                    + location.getLatitude() + "," + location.getLongitude());
+                            UserNote.sendNotification(context, "Location Details Updated: "
+                                    + location.getLatitude() + "," + location.getLongitude());
                             GeoPoint geoPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
                             FirebaseFirestore db = FirebaseFirestore.getInstance();
                             DocumentReference documentReference;

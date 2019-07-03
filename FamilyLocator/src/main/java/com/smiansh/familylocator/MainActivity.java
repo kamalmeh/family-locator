@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -23,15 +24,14 @@ import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.FirebaseFirestore;
 
 public class MainActivity extends AppCompatActivity {
+    private static final String TAG = "MAIN_ACTIVITY";
     private static final int PERMISSION_REQUEST = 10;
 
     private Button signin, register;
     private EditText username, pass;
 
-    private FirebaseFirestore db = FirebaseFirestore.getInstance();
     private FirebaseAuth mAuth;
     private FirebaseUser userId;
 
@@ -58,18 +58,18 @@ public class MainActivity extends AppCompatActivity {
         mAuth.addAuthStateListener(new FirebaseAuth.AuthStateListener() {
             @Override
             public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
-                FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+                FirebaseUser user = firebaseAuth.getCurrentUser();
                 if (user != null) {
                     int fine_location = ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION);
-                    int coarse_location = ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION);
-                    if (fine_location != PackageManager.PERMISSION_GRANTED &&
-                            coarse_location != PackageManager.PERMISSION_GRANTED) {
-                        ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
-                                        Manifest.permission.ACCESS_COARSE_LOCATION},
+                    if (fine_location != PackageManager.PERMISSION_GRANTED) {
+                        String[] permissions = new String[]{
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                        };
+                        ActivityCompat.requestPermissions(MainActivity.this, permissions,
                                 PERMISSION_REQUEST);
-                    } else {
-                        startMapActivity(user.getUid());
                     }
+                    startMapActivity(user.getUid());
                 }
             }
         });
@@ -78,31 +78,14 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-//        Log.i(TAG, "onRequestPermissionResult");
+        Log.i(TAG, "onRequestPermissionResult");
         if (requestCode == PERMISSION_REQUEST) {
             if (grantResults.length <= 0) {
-                // If user interaction was interrupted, the permission request is cancelled and you
-                // receive empty arrays.
-//                Log.i(TAG, "User interaction was cancelled.");
-
+                Log.i(TAG, "User interaction was cancelled.");
             } else if ((grantResults[0] == PackageManager.PERMISSION_GRANTED)
-                    && (grantResults[1] == PackageManager.PERMISSION_GRANTED)
-            ) {
-                // Permission was granted.
+                    && (grantResults[1] == PackageManager.PERMISSION_GRANTED)) {
                 startMapActivity(userId.getUid());
-
             } else {
-                // Permission denied.
-
-                // Notify the user via a SnackBar that they have rejected a core permission for the
-                // app, which makes the Activity useless. In a real app, core permissions would
-                // typically be best requested during a welcome-screen flow.
-
-                // Additionally, it is important to remember that a permission might have been
-                // rejected without asking the user for permission (device policy or "Never ask
-                // again" prompts). Therefore, a user interface affordance is typically implemented
-                // when permissions are denied. Otherwise, your app could appear unresponsive to
-                // touches or interactions which have required permissions.
                 Snackbar.make(
                         findViewById(R.id.activity_main),
                         R.string.permission_denied_explanation,
