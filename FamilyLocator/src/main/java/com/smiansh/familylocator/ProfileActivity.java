@@ -2,40 +2,59 @@ package com.smiansh.familylocator;
 
 import android.Manifest;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
+import android.provider.MediaStore;
+import android.provider.Settings;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 public class ProfileActivity extends AppCompatActivity {
     private static final String TAG = "PROFILE_ACTIVITY";
     private static final int PERMISSION_REQUEST = 10;
+    private static final int PHOTO_SELECTION_CODE = 11;
     private TextView currUser;
     private EditText firstName, lastName, phone;
     private Button update, addMember;
+    private ImageView uploadImage;
     private FirebaseFirestore db = FirebaseFirestore.getInstance();
     private String userId;
+    private SharedPreferences sp = null;
 
     @Override
     protected void onStart() {
@@ -121,10 +140,10 @@ public class ProfileActivity extends AppCompatActivity {
                     }
                 });
                 int permission = ContextCompat.checkSelfPermission(ProfileActivity.this,
-                        Manifest.permission.ACCESS_FINE_LOCATION);
+                        Manifest.permission.READ_EXTERNAL_STORAGE);
                 if (permission != PackageManager.PERMISSION_GRANTED) {
                     ActivityCompat.requestPermissions(ProfileActivity.this,
-                            new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                            new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
                             PERMISSION_REQUEST);
                 }
                 finish();
@@ -138,6 +157,101 @@ public class ProfileActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
+
+        uploadImage.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(Intent.ACTION_PICK);
+                intent.setDataAndType(MediaStore.Images.Media.INTERNAL_CONTENT_URI, "image/*");
+                intent.setAction(Intent.ACTION_OPEN_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                startActivityForResult(Intent.createChooser(intent, "Select Profile Picture"), PHOTO_SELECTION_CODE);
+            }
+        });
+
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_REQUEST) {
+            if (grantResults.length <= 0) {
+                // If user interaction was interrupted, the permission request is cancelled and you
+                // receive empty arrays.
+                Toast.makeText(this, "Permission is required for the core functionality of the application", Toast.LENGTH_LONG).show();
+
+            } else if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission was granted.
+                Toast.makeText(this, "Permission check success", Toast.LENGTH_SHORT).show();
+            } else {
+                Snackbar.make(
+                        findViewById(R.id.map),
+                        R.string.permission_denied_explanation,
+                        Snackbar.LENGTH_INDEFINITE)
+                        .setAction(R.string.settings, new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                // Build intent that displays the App settings screen.
+                                Intent intent = new Intent();
+                                intent.setAction(
+                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                                Uri uri = Uri.fromParts("package",
+                                        BuildConfig.APPLICATION_ID, null);
+                                intent.setData(uri);
+                                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                startActivity(intent);
+                            }
+                        })
+                        .show();
+            }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == PHOTO_SELECTION_CODE && resultCode == RESULT_OK && data != null) {
+            Uri selectedImage = data.getData();
+            if (selectedImage != null) {
+                StorageReference mStorageRef;
+                mStorageRef = FirebaseStorage.getInstance().getReference();
+
+                try {
+                    Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), selectedImage);
+                    uploadImage.setImageBitmap(bitmap);
+                    this.grantUriPermission(this.getPackageName(), selectedImage, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+//                    final int takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION;
+                    this.getContentResolver().takePersistableUriPermission(selectedImage, getIntent().getFlags());
+                    sp.edit().putString("profileImage", String.valueOf(selectedImage)).apply();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                StorageReference riversRef = mStorageRef.child("images/" + userId);
+
+                riversRef.putFile(selectedImage)
+                        .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                            @Override
+                            public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                                // Get a URL to the uploaded content
+                                Uri downloadUrl = taskSnapshot.getUploadSessionUri();
+                                Map<String, Object> profileImageData = new HashMap<>();
+                                if (downloadUrl != null) {
+                                    profileImageData.put("profileImage", downloadUrl.getPath() + "/images/" + userId);
+                                }
+                                db.collection("users").document(userId).set(profileImageData, SetOptions.merge());
+                            }
+                        })
+                        .addOnFailureListener(new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception exception) {
+                                Toast.makeText(ProfileActivity.this, "Upload Failed", Toast.LENGTH_LONG).show();
+                            }
+                        });
+            }
+        }
     }
 
     @Override
@@ -152,13 +266,34 @@ public class ProfileActivity extends AppCompatActivity {
         update = findViewById(R.id.update);
         currUser = findViewById(R.id.currUser);
         addMember = findViewById(R.id.addMember);
+        uploadImage = findViewById(R.id.profileImage);
+        sp = PreferenceManager.getDefaultSharedPreferences(this);
 
-        int permission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
+        int permission = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
         if (permission != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
                     PERMISSION_REQUEST);
-        } else {
-            //finish();
+        }
+
+        try {
+            Uri imageUri = Uri.parse(sp.getString("profileImage", null));
+            String[] projection = {MediaStore.Images.Media.DATA};
+            Cursor cursor = getContentResolver().query(imageUri, projection, null, null, null);
+            String path = null;
+            assert cursor != null;
+            if (cursor.moveToFirst()) {
+                int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+                path = cursor.getString(column_index);
+            }
+            cursor.close();
+            assert path != null;
+            File file = new File(path);
+            if (file.canRead()) {
+                Bitmap myBitmap = BitmapFactory.decodeFile(file.getPath());
+                uploadImage.setImageBitmap(myBitmap);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
         db.collection("users").document(userId).get()
@@ -171,7 +306,7 @@ public class ProfileActivity extends AppCompatActivity {
                             firstName.setText(fName);
                             lastName.setText(lName);
                             phone.setText(documentSnapshot.getString("phone"));
-                            currUser.setText("Welcome!! \n" + fName + " " + lName);
+                            currUser.setText(getString(R.string.welcome_text, fName, lName));
                         }
                     }
                 })

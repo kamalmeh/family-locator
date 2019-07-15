@@ -22,7 +22,10 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.SetOptions;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class LocationUpdates extends BroadcastReceiver {
@@ -30,11 +33,9 @@ public class LocationUpdates extends BroadcastReceiver {
     public static final String PROCESS_LOCATION_UPDATES =
             "com.smiansh.familylocator.action.PROCESS_UPDATES";
     private static final String TAG = "LocationUpdates";
-//    private Context Ctx;
 
     @Override
     public void onReceive(Context context, Intent intent) {
-//        Ctx = context;
         if (intent != null) {
             final String action = intent.getAction();
             if (action != null) {
@@ -47,41 +48,45 @@ public class LocationUpdates extends BroadcastReceiver {
                             String userId = user.getUid();
 //                            Log.i(TAG,"current user: " + userId);
 //                            Toast.makeText(Ctx, userId + "\n" + location.getLatitude() + "," + location.getLongitude(), Toast.LENGTH_SHORT).show();
-                            UserNote.sendNotification(context, "Location Details Updated: "
-                                    + location.getLatitude() + "," + location.getLongitude());
-                            GeoPoint geoPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
+//                            UserNote.sendNotification(context, "Location Details Updated: "
+//                                    + location.getLatitude() + "," + location.getLongitude());
+                            final GeoPoint geoPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
                             FirebaseFirestore db = FirebaseFirestore.getInstance();
                             DocumentReference documentReference;
                             documentReference = db.collection("users").document(userId);
+                            SimpleDateFormat format = new SimpleDateFormat("ddMMyyyyHHmmss", Locale.getDefault());
                             Map<String, Object> data = new HashMap<>();
                             data.put("location", geoPoint);
+                            data.put("location_timestamp", format.format(new Date()));
                             documentReference.set(data, SetOptions.merge());
                         }
-                    } else {
-                        Log.i(TAG, "Location result is null");
                     }
                 } else if (action.equals("android.intent.action.BOOT_COMPLETED")) {
-                    UserNote.sendNotification(context, "BOOT_COMPLETED");
-                    Intent locationIntent = new Intent(context, LocationUpdates.class);
-                    locationIntent.setAction(LocationUpdates.PROCESS_LOCATION_UPDATES);
-                    PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, locationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-                    LocationRequest locationRequest = LocationRequest.create();
-                    locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
-                    locationRequest.setInterval(1000);             //1 Seconds
-                    locationRequest.setFastestInterval(1000);       //1 Second
-                    locationRequest.setMaxWaitTime(300 * 1000);       //300 Seconds = 5 Minutes
-                    FusedLocationProviderClient fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(context);
-                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
-                            != PackageManager.PERMISSION_GRANTED
-                            && ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION)
-                            != PackageManager.PERMISSION_GRANTED) {
-                        Log.i(TAG, "Permissions are not granted");
-                    }
-                    fusedLocationProviderClient.requestLocationUpdates(locationRequest, pendingIntent);
+                    startLocationReporting(context);
                 } else {
                     Log.i(TAG, "Action Issue:" + action);
                 }
             }
         }
+    }
+
+    private void startLocationReporting(Context context) {
+        Intent locationIntent = new Intent(context, LocationUpdates.class);
+        locationIntent.setAction(LocationUpdates.PROCESS_LOCATION_UPDATES);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, locationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+        LocationRequest locationRequest = LocationRequest.create();
+        locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
+        locationRequest.setInterval(10000);             //1 Seconds
+        locationRequest.setFastestInterval(5000);       //1 Second
+        locationRequest.setSmallestDisplacement(10);    //10 Meters
+        locationRequest.setMaxWaitTime(15000);          //15 Seconds
+        FusedLocationProviderClient fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(context);
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            Log.i(TAG, "Permissions are not granted");
+        }
+        fusedLocationProviderClient.requestLocationUpdates(locationRequest, pendingIntent);
     }
 }
