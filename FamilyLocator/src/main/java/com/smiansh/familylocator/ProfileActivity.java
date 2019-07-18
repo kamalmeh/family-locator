@@ -19,7 +19,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.TextView;
+import android.widget.ListView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -48,13 +48,20 @@ public class ProfileActivity extends AppCompatActivity {
     private static final String TAG = "PROFILE_ACTIVITY";
     private static final int PERMISSION_REQUEST = 10;
     private static final int PHOTO_SELECTION_CODE = 11;
-    private TextView currUser;
+    //    private TextView currUser;
     private EditText firstName, lastName, phone;
     private Button update, addMember;
     private ImageView uploadImage;
+    private ListView listView;
     private FirebaseFirestore db = FirebaseFirestore.getInstance();
     private String userId;
     private SharedPreferences sp = null;
+
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+    }
 
     @Override
     protected void onStart() {
@@ -264,9 +271,11 @@ public class ProfileActivity extends AppCompatActivity {
         lastName = findViewById(R.id.lastName);
         phone = findViewById(R.id.phone);
         update = findViewById(R.id.update);
-        currUser = findViewById(R.id.currUser);
+//        currUser = findViewById(R.id.currUser);
         addMember = findViewById(R.id.addMember);
         uploadImage = findViewById(R.id.profileImage);
+        listView = findViewById(R.id.membersList);
+
         sp = PreferenceManager.getDefaultSharedPreferences(this);
 
         int permission = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
@@ -306,7 +315,14 @@ public class ProfileActivity extends AppCompatActivity {
                             firstName.setText(fName);
                             lastName.setText(lName);
                             phone.setText(documentSnapshot.getString("phone"));
-                            currUser.setText(getString(R.string.welcome_text, fName, lName));
+//                            currUser.setText(getString(R.string.welcome_text, fName, lName));
+
+                            @SuppressWarnings("unchecked") Map<String, String> membersList =
+                                    (Map<String, String>) documentSnapshot.get("family");
+                            if (membersList != null) {
+                                MembersListAdapter adapter = new MembersListAdapter(membersList);
+                                listView.setAdapter(adapter);
+                            }
                         }
                     }
                 })

@@ -79,7 +79,6 @@ public class AddMemberActivity extends AppCompatActivity {
                                 }
                             }
                         });
-//                Toast.makeText(AddMemberActivity.this, "Data Added" + authCode.getText().toString(), Toast.LENGTH_SHORT).show();
                 finish();
             }
         });

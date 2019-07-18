@@ -6,16 +6,17 @@
     android:layout_height="match_parent"
     android:layout_margin="15dp"
     android:orientation="vertical"
+    android:fontFamily="@string/common_google_play_services_enable_text"
     tools:context=".ProfileActivity">
 
-    <TextView
-        android:id="@+id/currUser"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textAlignment="center"
-        android:textFontWeight="24"
-        android:textSize="24sp"
-        android:textStyle="bold" />
+    <!--<TextView-->
+    <!--android:id="@+id/currUser"-->
+    <!--android:layout_width="match_parent"-->
+    <!--android:layout_height="wrap_content"-->
+    <!--android:textAlignment="center"-->
+    <!--android:textFontWeight="24"-->
+    <!--android:textSize="24sp"-->
+    <!--android:textStyle="bold" />-->
 
     <de.hdodenhof.circleimageview.CircleImageView
         android:id="@+id/profileImage"
@@ -23,13 +24,6 @@
         android:layout_height="100dp"
         android:layout_gravity="center"
         android:src="@drawable/ic_boy" />
-
-    <!--<ImageView-->
-    <!--android:id="@+id/profileImage"-->
-    <!--android:layout_width="100dp"-->
-    <!--android:layout_height="100dp"-->
-    <!--android:layout_gravity="center"-->
-    <!--android:src="@drawable/ic_boy" />-->
 
     <TextView
         android:id="@+id/first"
@@ -72,14 +66,23 @@
         android:id="@+id/phone"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="40dp"
+        android:layout_marginBottom="0dp"
+        android:fontFamily="@string/common_google_play_services_enable_text"
         android:hint="Phone"
         android:inputType="phone" />
 
-    <!--<RecyclerView-->
-    <!--android:id="@+id/membersList"-->
-    <!--android:layout_width="match_parent"-->
-    <!--android:layout_height="250sp" />-->
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="@string/common_google_play_services_enable_text"
+        android:text="Members" />
+
+    <ListView
+        android:id="@+id/membersList"
+        android:layout_width="match_parent"
+        android:layout_height="150dp"
+        android:layout_margin="5dp" />
 
     <LinearLayout
         android:layout_width="match_parent"
