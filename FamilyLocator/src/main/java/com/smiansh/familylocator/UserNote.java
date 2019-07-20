@@ -87,6 +87,7 @@ public class UserNote {
                 .setContentIntent(notificationPendingIntent);
         // Dismiss notification once the user touches it.
         builder.setAutoCancel(true);
+        builder.setTimeoutAfter(1000);
         // Get an instance of the Notification manager
         NotificationManager mNotificationManager =
                 (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);

@@ -6,6 +6,7 @@ import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -15,6 +16,7 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
@@ -90,6 +92,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     MarkerOptions mOpt = null;
     private HashMap<String, Marker> mMarkers = new HashMap<>();
     private Bitmap bmp = null;
+    private SharedPreferences sp = null;
 
     public static Bitmap createCustomMarker(Context context, Bitmap bmp) {
 
@@ -121,6 +124,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void initialize() {
         userId = Objects.requireNonNull(FirebaseAuth.getInstance().getCurrentUser()).getUid();
         db = FirebaseFirestore.getInstance();
+        try {
+            sp = PreferenceManager.getDefaultSharedPreferences(this);
+        } catch (NullPointerException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -133,7 +141,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        Toast.makeText(this, "Selected Item: " + item.getTitle(), Toast.LENGTH_SHORT).show();
+//        Toast.makeText(this, "Selected Item: " + item.getTitle(), Toast.LENGTH_SHORT).show();
         switch (item.getItemId()) {
             case R.id.updateProfile:
                 Intent intentProfile = new Intent(this, ProfileActivity.class);
@@ -231,6 +239,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
+        sp = PreferenceManager.getDefaultSharedPreferences(this);
         try {
             assert mapFragment != null;
             mapFragment.getMapAsync(this);
@@ -283,7 +292,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
 
         locateFamily();
-
         subscribeToLocations();
     }
 
@@ -325,8 +333,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         locationRequest.setInterval(10000);             //10 Seconds
         locationRequest.setFastestInterval(5000);       //5 Second
-        locationRequest.setSmallestDisplacement(10);    //10 Meters
-        locationRequest.setMaxWaitTime(15000);          //15 Seconds
+//        locationRequest.setSmallestDisplacement(0);     //10 Meters
+        locationRequest.setMaxWaitTime(30000);          //30 Seconds
+        locationRequest.setNumUpdates(120);             //120 updates in a minute
     }
 
     private PendingIntent getPendingIntent() {
@@ -446,7 +455,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 e.printStackTrace();
                             }
                         });
-
                 mOpt.icon(BitmapDescriptorFactory.fromBitmap(createCustomMarker(MapsActivity.this, bmp)));
                 mMarkers.put(title, mMap.addMarker(mOpt));
             } else {

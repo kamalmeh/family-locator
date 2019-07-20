@@ -1,20 +1,23 @@
 package com.smiansh.familylocator;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -39,10 +42,19 @@ import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.net.ssl.HttpsURLConnection;
 
 public class ProfileActivity extends AppCompatActivity {
     private static final String TAG = "PROFILE_ACTIVITY";
@@ -189,7 +201,8 @@ public class ProfileActivity extends AppCompatActivity {
                 // receive empty arrays.
                 Toast.makeText(this, "Permission is required for the core functionality of the application", Toast.LENGTH_LONG).show();
 
-            } else if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            } else if (grantResults[0] == PackageManager.PERMISSION_GRANTED &&
+                    grantResults[1] == PackageManager.PERMISSION_GRANTED) {
                 // Permission was granted.
                 Toast.makeText(this, "Permission check success", Toast.LENGTH_SHORT).show();
             } else {
@@ -278,28 +291,51 @@ public class ProfileActivity extends AppCompatActivity {
 
         sp = PreferenceManager.getDefaultSharedPreferences(this);
 
-        int permission = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
-        if (permission != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+        int permission_read = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
+        int permission_write = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
+        if (permission_read != PackageManager.PERMISSION_GRANTED &&
+                permission_write != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{
+                            Manifest.permission.READ_EXTERNAL_STORAGE,
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE
+                    },
                     PERMISSION_REQUEST);
         }
 
         try {
-            Uri imageUri = Uri.parse(sp.getString("profileImage", null));
-            String[] projection = {MediaStore.Images.Media.DATA};
-            Cursor cursor = getContentResolver().query(imageUri, projection, null, null, null);
-            String path = null;
-            assert cursor != null;
-            if (cursor.moveToFirst()) {
-                int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
-                path = cursor.getString(column_index);
-            }
-            cursor.close();
-            assert path != null;
-            File file = new File(path);
-            if (file.canRead()) {
-                Bitmap myBitmap = BitmapFactory.decodeFile(file.getPath());
-                uploadImage.setImageBitmap(myBitmap);
+            String path = sp.getString("profileImage", null);
+            try {
+                FileInputStream is = null;
+                if (path != null) {
+                    is = new FileInputStream(new File(path));
+                    Bitmap myBitmap = BitmapFactory.decodeStream(is);
+                    uploadImage.setImageBitmap(myBitmap);
+                    is.close();
+                } else {
+                    StorageReference storageReference = FirebaseStorage.getInstance().getReference();
+                    StorageReference profilePicPath = storageReference.child("images/" + userId);
+                    profilePicPath.getDownloadUrl()
+                            .addOnSuccessListener(new OnSuccessListener<Uri>() {
+                                @Override
+                                public void onSuccess(Uri uri) {
+                                    DownloadFilesTask downloadFilesTask = new DownloadFilesTask();
+                                    try {
+                                        downloadFilesTask.execute(new URL(uri.toString()));
+                                    } catch (MalformedURLException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            })
+                            .addOnFailureListener(new OnFailureListener() {
+                                @Override
+                                public void onFailure(@NonNull Exception e) {
+                                    e.printStackTrace();
+                                }
+                            });
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -332,5 +368,46 @@ public class ProfileActivity extends AppCompatActivity {
                         Toast.makeText(ProfileActivity.this, e.toString(), Toast.LENGTH_SHORT).show();
                     }
                 });
+    }
+
+    @SuppressLint("StaticFieldLeak")
+    class DownloadFilesTask extends AsyncTask<URL, Void, Void> {
+
+        @Override
+        protected Void doInBackground(URL... urls) {
+            InputStream is = null;
+            try {
+                HttpsURLConnection connection = (HttpsURLConnection) new URL(urls[0].toString()).openConnection();
+                Log.i(TAG, urls[0].toString());
+                connection.connect();
+                is = connection.getInputStream();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            final Bitmap bitmap = BitmapFactory.decodeStream(is);
+            File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), userId);
+            if (file.exists())
+                file.delete();
+            try {
+                OutputStream os = new BufferedOutputStream(new FileOutputStream(file));
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, os);
+                Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+                Uri contentUri = Uri.fromFile(file);
+                mediaScanIntent.setData(contentUri);
+                sendBroadcast(mediaScanIntent);
+                sp.edit().putString("profileImage", file.getAbsolutePath()).apply();
+                os.flush();
+                os.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    uploadImage.setImageBitmap(bitmap);
+                }
+            });
+            return null;
+        }
     }
 }

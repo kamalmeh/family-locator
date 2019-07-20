@@ -12,6 +12,7 @@ import android.util.Log;
 import androidx.core.content.ContextCompat;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
@@ -33,6 +34,34 @@ public class LocationUpdates extends BroadcastReceiver {
     public static final String PROCESS_LOCATION_UPDATES =
             "com.smiansh.familylocator.action.PROCESS_UPDATES";
     private static final String TAG = "LocationUpdates";
+    private LocationCallback locationCallback = new LocationCallback() {
+        @Override
+        public void onLocationResult(LocationResult locationResult) {
+            super.onLocationResult(locationResult);
+            updateToDatabase(locationResult);
+        }
+    };
+
+    private void updateToDatabase(LocationResult locationResult) {
+        Location location = locationResult.getLastLocation();
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null) {
+            String userId = user.getUid();
+//                            Log.i(TAG,"current user: " + userId);
+//                            Toast.makeText(Ctx, userId + "\n" + location.getLatitude() + "," + location.getLongitude(), Toast.LENGTH_SHORT).show();
+//                            UserNote.sendNotification(context, "Location Details Updated: ");
+//                                    + location.getLatitude() + "," + location.getLongitude());
+            final GeoPoint geoPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
+            DocumentReference documentReference;
+            documentReference = db.collection("users").document(userId);
+            SimpleDateFormat format = new SimpleDateFormat("ddMMyyyyHHmmss", Locale.getDefault());
+            Map<String, Object> data = new HashMap<>();
+            data.put("location", geoPoint);
+            data.put("location_timestamp", format.format(new Date()));
+            documentReference.set(data, SetOptions.merge());
+        }
+    }
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -42,25 +71,27 @@ public class LocationUpdates extends BroadcastReceiver {
                 if (PROCESS_LOCATION_UPDATES.equals(action)) {
                     LocationResult result = LocationResult.extractResult(intent);
                     if (result != null) {
-                        Location location = result.getLastLocation();
-                        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-                        if (user != null) {
-                            String userId = user.getUid();
-//                            Log.i(TAG,"current user: " + userId);
-//                            Toast.makeText(Ctx, userId + "\n" + location.getLatitude() + "," + location.getLongitude(), Toast.LENGTH_SHORT).show();
-//                            UserNote.sendNotification(context, "Location Details Updated: "
-//                                    + location.getLatitude() + "," + location.getLongitude());
-                            final GeoPoint geoPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
-                            FirebaseFirestore db = FirebaseFirestore.getInstance();
-                            DocumentReference documentReference;
-                            documentReference = db.collection("users").document(userId);
-                            SimpleDateFormat format = new SimpleDateFormat("ddMMyyyyHHmmss", Locale.getDefault());
-                            Map<String, Object> data = new HashMap<>();
-                            data.put("location", geoPoint);
-                            data.put("location_timestamp", format.format(new Date()));
-                            documentReference.set(data, SetOptions.merge());
-                        }
+                        updateToDatabase(result);
+//                        Location location = result.getLastLocation();
+//                        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+//                        if (user != null) {
+//                            String userId = user.getUid();
+////                            Log.i(TAG,"current user: " + userId);
+////                            Toast.makeText(Ctx, userId + "\n" + location.getLatitude() + "," + location.getLongitude(), Toast.LENGTH_SHORT).show();
+////                            UserNote.sendNotification(context, "Location Details Updated: ");
+////                                    + location.getLatitude() + "," + location.getLongitude());
+//                            final GeoPoint geoPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
+//                            FirebaseFirestore db = FirebaseFirestore.getInstance();
+//                            DocumentReference documentReference;
+//                            documentReference = db.collection("users").document(userId);
+//                            SimpleDateFormat format = new SimpleDateFormat("ddMMyyyyHHmmss", Locale.getDefault());
+//                            Map<String, Object> data = new HashMap<>();
+//                            data.put("location", geoPoint);
+//                            data.put("location_timestamp", format.format(new Date()));
+//                            documentReference.set(data, SetOptions.merge());
+//                        }
                     }
+                    startLocationReporting(context);
                 } else if (action.equals("android.intent.action.BOOT_COMPLETED")) {
                     startLocationReporting(context);
                 } else {
@@ -75,11 +106,12 @@ public class LocationUpdates extends BroadcastReceiver {
         locationIntent.setAction(LocationUpdates.PROCESS_LOCATION_UPDATES);
         PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, locationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
         LocationRequest locationRequest = LocationRequest.create();
-        locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
-        locationRequest.setInterval(10000);             //1 Seconds
-        locationRequest.setFastestInterval(5000);       //1 Second
-        locationRequest.setSmallestDisplacement(10);    //10 Meters
-        locationRequest.setMaxWaitTime(15000);          //15 Seconds
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        locationRequest.setInterval(10000);             //10 Seconds
+        locationRequest.setFastestInterval(5000);       //5 Second
+//        locationRequest.setSmallestDisplacement(0);    //10 Meters
+        locationRequest.setMaxWaitTime(30000);           //1 Second
+        locationRequest.setNumUpdates(120);             //120 updates in a minute
         FusedLocationProviderClient fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(context);
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED
@@ -88,5 +120,6 @@ public class LocationUpdates extends BroadcastReceiver {
             Log.i(TAG, "Permissions are not granted");
         }
         fusedLocationProviderClient.requestLocationUpdates(locationRequest, pendingIntent);
+        fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, null);
     }
 }
