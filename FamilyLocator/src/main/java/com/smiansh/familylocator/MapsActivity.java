@@ -8,16 +8,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -34,6 +31,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdSize;
+import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
@@ -41,7 +42,6 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
@@ -61,7 +61,6 @@ import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -89,10 +88,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ" + "abcdefghijklmnopqrstuvwxyz";
     private String userId;
     private FirebaseFirestore db;
-    MarkerOptions mOpt = null;
+    private MarkerOptions mOpt = null;
     private HashMap<String, Marker> mMarkers = new HashMap<>();
     private Bitmap bmp = null;
     private SharedPreferences sp = null;
+    private AdView mAdView;
+    private Helper myHelper;
 
     public static Bitmap createCustomMarker(Context context, Bitmap bmp) {
 
@@ -122,9 +123,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     protected void initialize() {
-        userId = Objects.requireNonNull(FirebaseAuth.getInstance().getCurrentUser()).getUid();
-        db = FirebaseFirestore.getInstance();
         try {
+            userId = Objects.requireNonNull(FirebaseAuth.getInstance().getCurrentUser()).getUid();
+            db = FirebaseFirestore.getInstance();
             sp = PreferenceManager.getDefaultSharedPreferences(this);
         } catch (NullPointerException e) {
             e.printStackTrace();
@@ -135,23 +136,31 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void onResume() {
         super.onResume();
         initialize();
+        locateFamily();
         subscribeToLocations();
-        requestLocationUpdates(null);
+//        requestLocationUpdates(null);
     }
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-//        Toast.makeText(this, "Selected Item: " + item.getTitle(), Toast.LENGTH_SHORT).show();
         switch (item.getItemId()) {
+            case R.id.signout:
+                FirebaseAuth.getInstance().signOut();
+                myHelper.destroyAlarm();
+                myHelper.stopTrackingService(this);
+                finish();
+                break;
             case R.id.updateProfile:
                 Intent intentProfile = new Intent(this, ProfileActivity.class);
                 intentProfile.putExtra("userId", userId);
                 startActivity(intentProfile);
+                finish();
                 break;
             case R.id.addMember:
                 Intent intentAddMember = new Intent(this, AddMemberActivity.class);
                 intentAddMember.putExtra("userId", userId);
                 startActivity(intentAddMember);
+                finish();
                 break;
             case R.id.shareLocation:
                 final DocumentReference docRef = db.collection("users").document(userId);
@@ -206,9 +215,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 Toast.makeText(MapsActivity.this, e.toString(), Toast.LENGTH_SHORT).show();
                             }
                         });
-                Intent intentShareLocation = new Intent(this, ShareCodeActivity.class);
-                intentShareLocation.putExtra("userId", userId);
-                startActivity(intentShareLocation);
+                finish();
                 break;
             default:
                 return super.onOptionsItemSelected(item);
@@ -235,7 +242,15 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        myHelper = new Helper(getApplicationContext());
+        myHelper.createAlarm(60000);
         setContentView(R.layout.activity_maps);
+        MobileAds.initialize(this, getString(R.string.ads));
+        mAdView = findViewById(R.id.adView);
+        mAdView.setAdSize(AdSize.SMART_BANNER);
+        mAdView.setAdUnitId(getString(R.string.ads));
+        AdRequest adRequest = new AdRequest.Builder().build();
+        mAdView.loadAd(adRequest);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -253,22 +268,23 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     protected void onStop() {
         super.onStop();
-        requestLocationUpdates(null);
+//        requestLocationUpdates(null);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        requestLocationUpdates(null);
+//        requestLocationUpdates(null);
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_REQUEST);
-        }
-        requestLocationUpdates(null);
+        initialize();
+//        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+//            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_REQUEST);
+//        }
+//        requestLocationUpdates(null);
     }
 
     @Override
@@ -286,8 +302,14 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
             @Override
             public boolean onMarkerClick(Marker marker) {
-                Toast.makeText(MapsActivity.this, marker.getTitle() + " clicked", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(MapsActivity.this, marker.getTitle() + " clicked", Toast.LENGTH_SHORT).show();
                 return false;
+            }
+        });
+        mMap.setOnInfoWindowLongClickListener(new GoogleMap.OnInfoWindowLongClickListener() {
+            @Override
+            public void onInfoWindowLongClick(Marker marker) {
+
             }
         });
 
@@ -300,30 +322,33 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == PERMISSION_REQUEST) {
             if (grantResults.length <= 0) {
-                Toast.makeText(this, "Permission is required for the core functionality of the application", Toast.LENGTH_LONG).show();
-            } else if ((grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                // Permission was granted.
-                requestLocationUpdates(null);
+                Log.i(TAG, "User interaction was cancelled.");
             } else {
-                Snackbar.make(
-                        findViewById(R.id.map),
-                        R.string.permission_denied_explanation,
-                        Snackbar.LENGTH_INDEFINITE)
-                        .setAction(R.string.settings, new View.OnClickListener() {
-                            @Override
-                            public void onClick(View view) {
-                                // Build intent that displays the App settings screen.
-                                Intent intent = new Intent();
-                                intent.setAction(
-                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                                Uri uri = Uri.fromParts("package",
-                                        BuildConfig.APPLICATION_ID, null);
-                                intent.setData(uri);
-                                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                startActivity(intent);
-                            }
-                        })
-                        .show();
+                if ((grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                    // Permission was granted.
+                    Log.i(TAG, "Permission was granted");
+//                    requestLocationUpdates(null);
+                } else {
+                    Snackbar.make(
+                            findViewById(R.id.map),
+                            R.string.permission_denied_explanation,
+                            Snackbar.LENGTH_INDEFINITE)
+                            .setAction(R.string.settings, new View.OnClickListener() {
+                                @Override
+                                public void onClick(View view) {
+                                    // Build intent that displays the App settings screen.
+                                    Intent intent = new Intent();
+                                    intent.setAction(
+                                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                                    Uri uri = Uri.fromParts("package",
+                                            BuildConfig.APPLICATION_ID, null);
+                                    intent.setData(uri);
+                                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                    startActivity(intent);
+                                }
+                            })
+                            .show();
+                }
             }
         }
     }
@@ -331,10 +356,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void prepareLocationRequest() {
         locationRequest = LocationRequest.create();
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        locationRequest.setInterval(10000);             //10 Seconds
-        locationRequest.setFastestInterval(5000);       //5 Second
-//        locationRequest.setSmallestDisplacement(0);     //10 Meters
-        locationRequest.setMaxWaitTime(30000);          //30 Seconds
+        locationRequest.setInterval(1000);              //1 Second
+        locationRequest.setFastestInterval(1000);       //1 Second
+        locationRequest.setSmallestDisplacement(10);    //10 Meters
+        locationRequest.setMaxWaitTime(10000);          //10 Seconds
         locationRequest.setNumUpdates(120);             //120 updates in a minute
     }
 
@@ -370,7 +395,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         Map<String, Object> family = (Map<String, Object>) documentSnapshot.get("family");
                         if (family != null) {
                             for (Map.Entry<String, Object> entry : family.entrySet()) {
-                                DocumentReference memberRef = (DocumentReference) entry.getValue();
+                                DocumentReference memberRef = db.document(entry.getValue().toString());
                                 memberRef.get()
                                         .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
                                             @Override
@@ -381,7 +406,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                         .addOnFailureListener(new OnFailureListener() {
                                             @Override
                                             public void onFailure(@NonNull Exception e) {
-                                                //TODO: add Error Handling
+                                                e.printStackTrace();
                                             }
                                         });
                                 memberRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
@@ -404,25 +429,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 });
     }
 
-    private BitmapDescriptor bitmapDescriptorFromVector(Context context, int vectorResId) {
-        Drawable vectorDrawable = ContextCompat.getDrawable(context, vectorResId);
-        if (vectorDrawable != null) {
-            vectorDrawable.setBounds(0, 0, vectorDrawable.getIntrinsicWidth(), vectorDrawable.getIntrinsicHeight());
-        }
-        Bitmap bitmap = null;
-        if (vectorDrawable != null) {
-            bitmap = Bitmap.createBitmap(vectorDrawable.getIntrinsicWidth(), vectorDrawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
-        }
-        Canvas canvas = null;
-        if (bitmap != null) {
-            canvas = new Canvas(bitmap);
-        }
-        if (canvas != null) {
-            vectorDrawable.draw(canvas);
-        }
-        return BitmapDescriptorFactory.fromBitmap(bitmap);
-    }
-
     private void setMarker(DocumentSnapshot dataSnapshot) {
         final String title = dataSnapshot.getString("firstName");
         GeoPoint geoPoint = dataSnapshot.getGeoPoint("location");
@@ -434,31 +440,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (location != null) {
             if (!mMarkers.containsKey(title)) {
                 mOpt = new MarkerOptions().title(title).position(location);
-                StorageReference profilePicRef = FirebaseStorage.getInstance().getReference();
-                StorageReference profilePicPath = profilePicRef.child("images/" + uid);
-                profilePicPath.getDownloadUrl()
-                        .addOnSuccessListener(new OnSuccessListener<Uri>() {
-                            @Override
-                            public void onSuccess(Uri uri) {
-                                try {
-                                    MarkerParams mParam = new MarkerParams(title, new URL(uri.toString()));
-                                    DownloadFilesTask downloadFilesTask = new DownloadFilesTask();
-                                    downloadFilesTask.execute(mParam);
-                                } catch (MalformedURLException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                        })
-                        .addOnFailureListener(new OnFailureListener() {
-                            @Override
-                            public void onFailure(@NonNull Exception e) {
-                                e.printStackTrace();
-                            }
-                        });
+                downloadProfileImage(uid, title);
                 mOpt.icon(BitmapDescriptorFactory.fromBitmap(createCustomMarker(MapsActivity.this, bmp)));
                 mMarkers.put(title, mMap.addMarker(mOpt));
             } else {
                 Objects.requireNonNull(mMarkers.get(title)).setPosition(location);
+                downloadProfileImage(uid, title);
             }
             LatLngBounds.Builder builder = new LatLngBounds.Builder();
             for (Marker marker : mMarkers.values()) {
@@ -468,29 +455,32 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    private Bitmap getBitmap(Uri imageUri) {
-        String[] projection = {MediaStore.Images.Media.DATA};
-        Cursor cursor = getContentResolver().query(imageUri, projection, null, null, null);
-        String path = null;
-        if (cursor == null)
-            return null;
-        if (cursor.moveToFirst()) {
-            int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
-            path = cursor.getString(column_index);
-        }
-        cursor.close();
-        if (path == null)
-            return null;
-        File file = new File(path);
-        if (file.canRead()) {
-            return BitmapFactory.decodeFile(file.getPath());
-        }
-        return null;
+    private void downloadProfileImage(String uid, final String title) {
+        StorageReference profilePicRef = FirebaseStorage.getInstance().getReference();
+        StorageReference profilePicPath = profilePicRef.child("images/" + uid);
+        profilePicPath.getDownloadUrl()
+                .addOnSuccessListener(new OnSuccessListener<Uri>() {
+                    @Override
+                    public void onSuccess(Uri uri) {
+                        try {
+                            MarkerParams mParam = new MarkerParams(title, new URL(uri.toString()));
+                            DownloadFilesTask downloadFilesTask = new DownloadFilesTask();
+                            downloadFilesTask.execute(mParam);
+                        } catch (MalformedURLException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        e.printStackTrace();
+                    }
+                });
     }
 
     private void locateFamily() {
-        DocumentReference docRef = db.collection("users").document(userId);
-        docRef.get()
+        myHelper.getUserData().get()
                 .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
                     @Override
                     public void onSuccess(DocumentSnapshot documentSnapshot) {
@@ -499,7 +489,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                             Map<String, Object> family = (Map<String, Object>) documentSnapshot.get("family");
                             if (family != null) {
                                 for (Map.Entry row : family.entrySet()) {
-                                    DocumentReference localDocRef = (DocumentReference) row.getValue();
+                                    DocumentReference localDocRef = db.document(row.getValue().toString());
                                     localDocRef.get()
                                             .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
                                                 @Override
@@ -510,7 +500,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                             .addOnFailureListener(new OnFailureListener() {
                                                 @Override
                                                 public void onFailure(@NonNull Exception e) {
-                                                    //TODO: add error handling
+                                                    e.printStackTrace();
                                                 }
                                             });
                                 }
@@ -523,7 +513,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 .addOnFailureListener(new OnFailureListener() {
                     @Override
                     public void onFailure(@NonNull Exception e) {
-                        //TODO: Add error handling
+                        e.printStackTrace();
                     }
                 });
     }

@@ -9,6 +9,16 @@
     <string name="authcode">Sample 6 Characters Auth Code</string>
     <string name="download_profile_pic">https://</string>
     <string name="welcome_text">Welcome!!!\n%s %s</string>
+    <string name="email_hint">Email Address</string>
+    <string name="pass_hint">Password</string>
+    <string name="signin">SignIn</string>
+    <string name="register">Register</string>
+    <string name="test_ads">ca-app-pub-3940256099942544/6300978111</string>
+    <string name="ads">ca-app-pub-3940256099942544/6300978111</string>
+    <string name="date_format">ddMMyyyyHHmmss</string>
+    <string name="channel">FAMILY_LOCATOR</string>
+    <string name="channel_id">FAMILY_LOCATOR</string>
+    <string name="notification_message">Family Locator - Current Activity: %s</string>
     <plurals name="num_locations_reported">
         <item quantity="zero">No location reported</item>
         <item quantity="one">One location reported</item>

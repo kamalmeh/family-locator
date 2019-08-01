@@ -19,6 +19,7 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -69,10 +70,24 @@ public class ProfileActivity extends AppCompatActivity {
     private String userId;
     private SharedPreferences sp = null;
 
+    @Override
+    protected void onPostResume() {
+        super.onPostResume();
+        getProfileData();
+    }
 
     @Override
     protected void onStop() {
         super.onStop();
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        Intent mapActivity = new Intent(this, MapsActivity.class);
+        mapActivity.putExtra("userId", userId);
+        startActivity(mapActivity);
+        finish();
     }
 
     @Override
@@ -87,10 +102,8 @@ public class ProfileActivity extends AppCompatActivity {
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 if (charSequence.length() == 0) {
-                    update.setEnabled(false);
                     firstName.setHintTextColor(Color.RED);
                 } else {
-                    update.setEnabled(true);
                     firstName.setHintTextColor(Color.BLACK);
                 }
             }
@@ -109,10 +122,8 @@ public class ProfileActivity extends AppCompatActivity {
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 if (charSequence.length() == 0) {
-                    update.setEnabled(false);
                     firstName.setHintTextColor(Color.RED);
                 } else {
-                    update.setEnabled(true);
                     firstName.setHintTextColor(Color.BLACK);
                 }
             }
@@ -131,10 +142,8 @@ public class ProfileActivity extends AppCompatActivity {
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 if (charSequence.length() == 0) {
-                    update.setEnabled(false);
                     firstName.setHintTextColor(Color.RED);
                 } else {
-                    update.setEnabled(true);
                     firstName.setHintTextColor(Color.BLACK);
                 }
             }
@@ -147,25 +156,32 @@ public class ProfileActivity extends AppCompatActivity {
         update.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Map<String, Object> data = new HashMap<>();
-                data.put("firstName", firstName.getText().toString());
-                data.put("lastName", lastName.getText().toString());
-                data.put("phone", phone.getText().toString());
-                DocumentReference docRef = db.collection("users").document(userId);
-                docRef.set(data, SetOptions.merge()).addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        Toast.makeText(ProfileActivity.this, e.toString(), Toast.LENGTH_SHORT).show();
+                if (update.getText().equals("Update")) {
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("firstName", firstName.getText().toString());
+                    data.put("lastName", lastName.getText().toString());
+                    data.put("phone", phone.getText().toString());
+                    DocumentReference docRef = db.collection("users").document(userId);
+                    docRef.set(data, SetOptions.merge()).addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            Toast.makeText(ProfileActivity.this, e.toString(), Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                    int permission = ContextCompat.checkSelfPermission(ProfileActivity.this,
+                            Manifest.permission.READ_EXTERNAL_STORAGE);
+                    if (permission != PackageManager.PERMISSION_GRANTED) {
+                        ActivityCompat.requestPermissions(ProfileActivity.this,
+                                new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                                PERMISSION_REQUEST);
                     }
-                });
-                int permission = ContextCompat.checkSelfPermission(ProfileActivity.this,
-                        Manifest.permission.READ_EXTERNAL_STORAGE);
-                if (permission != PackageManager.PERMISSION_GRANTED) {
-                    ActivityCompat.requestPermissions(ProfileActivity.this,
-                            new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                            PERMISSION_REQUEST);
+                    finish();
+                } else {
+                    firstName.setEnabled(true);
+                    lastName.setEnabled(true);
+                    phone.setEnabled(true);
+                    update.setText("Update");
                 }
-                finish();
             }
         });
 
@@ -173,6 +189,7 @@ public class ProfileActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 Intent intent = new Intent(ProfileActivity.this, AddMemberActivity.class);
+                intent.putExtra("userId", userId);
                 startActivity(intent);
             }
         });
@@ -244,7 +261,8 @@ public class ProfileActivity extends AppCompatActivity {
                     this.grantUriPermission(this.getPackageName(), selectedImage, Intent.FLAG_GRANT_READ_URI_PERMISSION);
 //                    final int takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION;
                     this.getContentResolver().takePersistableUriPermission(selectedImage, getIntent().getFlags());
-                    sp.edit().putString("profileImage", String.valueOf(selectedImage)).apply();
+//                    sp.edit().putString("profileImage", String.valueOf(selectedImage)).apply();
+                    sp.edit().putString("profileImage", selectedImage.getPath()).apply();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -288,6 +306,10 @@ public class ProfileActivity extends AppCompatActivity {
         addMember = findViewById(R.id.addMember);
         uploadImage = findViewById(R.id.profileImage);
         listView = findViewById(R.id.membersList);
+        firstName.setEnabled(false);
+        lastName.setEnabled(false);
+        phone.setEnabled(false);
+        update.setText("Edit");
 
         sp = PreferenceManager.getDefaultSharedPreferences(this);
 
@@ -306,41 +328,33 @@ public class ProfileActivity extends AppCompatActivity {
         try {
             String path = sp.getString("profileImage", null);
             try {
-                FileInputStream is = null;
+                FileInputStream is;
                 if (path != null) {
                     is = new FileInputStream(new File(path));
                     Bitmap myBitmap = BitmapFactory.decodeStream(is);
                     uploadImage.setImageBitmap(myBitmap);
                     is.close();
                 } else {
-                    StorageReference storageReference = FirebaseStorage.getInstance().getReference();
-                    StorageReference profilePicPath = storageReference.child("images/" + userId);
-                    profilePicPath.getDownloadUrl()
-                            .addOnSuccessListener(new OnSuccessListener<Uri>() {
-                                @Override
-                                public void onSuccess(Uri uri) {
-                                    DownloadFilesTask downloadFilesTask = new DownloadFilesTask();
-                                    try {
-                                        downloadFilesTask.execute(new URL(uri.toString()));
-                                    } catch (MalformedURLException e) {
-                                        e.printStackTrace();
-                                    }
-                                }
-                            })
-                            .addOnFailureListener(new OnFailureListener() {
-                                @Override
-                                public void onFailure(@NonNull Exception e) {
-                                    e.printStackTrace();
-                                }
-                            });
+                    downloadProfileImage();
                 }
             } catch (Exception e) {
                 e.printStackTrace();
+                downloadProfileImage();
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
 
+        getProfileData();
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                Toast.makeText(getBaseContext(), "Touch and Hold to delete", Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void getProfileData() {
         db.collection("users").document(userId).get()
                 .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
                     @Override
@@ -368,6 +382,60 @@ public class ProfileActivity extends AppCompatActivity {
                         Toast.makeText(ProfileActivity.this, e.toString(), Toast.LENGTH_SHORT).show();
                     }
                 });
+        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long l) {
+                final String name = adapterView.getAdapter().getItem(i).toString().split("=")[0];
+                final String item = adapterView.getAdapter().getItem(i).toString().split("=")[1];
+                final DocumentReference docRef = db.document("users/" + userId);
+                docRef.get()
+                        .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                            @Override
+                            public void onSuccess(DocumentSnapshot documentSnapshot) {
+                                Map<String, Object> data = documentSnapshot.getData();
+                                if (data != null) {
+                                    //noinspection unchecked
+                                    Map<String, String> family = (Map<String, String>) data.get("family");
+                                    family.remove(item);
+                                    data.put("family", family);
+                                    docRef.set(data);
+                                    Toast.makeText(ProfileActivity.this, name + " deleted", Toast.LENGTH_LONG).show();
+                                    getProfileData();
+                                }
+                            }
+                        })
+                        .addOnFailureListener(new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                e.printStackTrace();
+                            }
+                        });
+                return false;
+            }
+        });
+    }
+
+    private void downloadProfileImage() {
+        StorageReference storageReference = FirebaseStorage.getInstance().getReference();
+        StorageReference profilePicPath = storageReference.child("images/" + userId);
+        profilePicPath.getDownloadUrl()
+                .addOnSuccessListener(new OnSuccessListener<Uri>() {
+                    @Override
+                    public void onSuccess(Uri uri) {
+                        DownloadFilesTask downloadFilesTask = new DownloadFilesTask();
+                        try {
+                            downloadFilesTask.execute(new URL(uri.toString()));
+                        } catch (MalformedURLException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        e.printStackTrace();
+                    }
+                });
     }
 
     @SuppressLint("StaticFieldLeak")
@@ -387,7 +455,9 @@ public class ProfileActivity extends AppCompatActivity {
             final Bitmap bitmap = BitmapFactory.decodeStream(is);
             File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), userId);
             if (file.exists())
-                file.delete();
+                if (!file.delete()) {
+                    Toast.makeText(ProfileActivity.this, "File could not be deleted, skipping", Toast.LENGTH_SHORT).show();
+                }
             try {
                 OutputStream os = new BufferedOutputStream(new FileOutputStream(file));
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 90, os);

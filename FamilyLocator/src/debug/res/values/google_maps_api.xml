@@ -1,7 +1,5 @@
 <resources>
     <!--
-    TODO: Before you run your application, you need a Google Maps API key.
-
     To get one, follow this link, follow the directions and press "Create" at the end:
 
     https://console.developers.google.com/flows/enableapi?apiid=maps_android_backend&keyType=CLIENT_SIDE_ANDROID&r=95:D1:24:9F:6A:10:11:3F:84:DF:98:32:2B:83:41:30:42:98:E1:D5%3Bcom.smiansh.familylocator

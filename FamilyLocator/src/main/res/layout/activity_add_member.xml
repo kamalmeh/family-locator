@@ -10,7 +10,7 @@
         android:id="@+id/authCode"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="10 Digit Mobile Number"
+        android:hint="Authentication Code"
         android:inputType="text" />
 
     <Button

@@ -10,6 +10,5 @@
         android:layout_margin="10dp"
         android:layout_weight="1"
         android:fontFamily="@string/common_google_play_services_enable_text"
-        android:text="Test"
         android:textSize="14sp" />
 </LinearLayout>

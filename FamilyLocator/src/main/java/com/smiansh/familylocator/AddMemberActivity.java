@@ -1,5 +1,6 @@
 package com.smiansh.familylocator;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
@@ -20,9 +21,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class AddMemberActivity extends AppCompatActivity {
-    String memberId = null;
+    String memberId = "test";
     private EditText authCode;
     private FirebaseFirestore db = FirebaseFirestore.getInstance();
+    DocumentReference authRef;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,8 +48,7 @@ public class AddMemberActivity extends AppCompatActivity {
                     authCode.setHintTextColor(Color.RED);
                     return;
                 }
-                final DocumentReference docRef = db.collection("users").document(userId);
-                final DocumentReference authRef = db.collection("authcodes").document(memberAuthCode);
+                authRef = db.collection("authcodes").document(memberAuthCode);
                 authRef.get()
                         .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
                             @Override
@@ -63,19 +64,30 @@ public class AddMemberActivity extends AppCompatActivity {
                                         Toast.LENGTH_SHORT).show();
                             }
                         });
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                final DocumentReference docRef = db.collection("users").document(userId);
                 docRef.get()
                         .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
                             @Override
                             public void onSuccess(DocumentSnapshot documentSnapshot) {
                                 if (documentSnapshot != null) {
-                                    Map<String, Object> family = (Map<String, Object>) documentSnapshot.get("family");
+                                    Map<String, String> family;
+                                    //noinspection unchecked
+                                    family = (Map<String, String>) documentSnapshot.get("family");
                                     if (family == null) {
                                         family = new HashMap<>();
                                     }
-                                    family.put(memberId, db.document("/users/" + memberId));
+                                    family.put(memberId, "/users/" + memberId);
                                     Map<String, Object> familyData = new HashMap<>();
-                                    familyData.put("family", family);
+                                    familyData.put("family." + memberId, "/users/" + memberId);
                                     docRef.update(familyData);
+                                    Intent mapActivity = new Intent(getApplicationContext(), MapsActivity.class);
+                                    mapActivity.putExtra("userId", userId);
+                                    startActivity(mapActivity);
                                 }
                             }
                         });

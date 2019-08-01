@@ -10,6 +10,7 @@ import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,7 +24,7 @@ public class MembersListAdapter extends BaseAdapter {
     MembersListAdapter(Map<String, String> map) {
         mData = new ArrayList();
         for (Map.Entry entry : map.entrySet()) {
-            final DocumentReference documentReference = (DocumentReference) entry.getValue();
+            final DocumentReference documentReference = FirebaseFirestore.getInstance().document(entry.getValue().toString());
 
             Thread thread = new Thread(new Runnable() {
                 @Override
@@ -51,6 +52,7 @@ public class MembersListAdapter extends BaseAdapter {
             }
         }
         if (tempMap != null) {
+            //noinspection unchecked
             mData.addAll(tempMap.entrySet());
         }
     }

@@ -46,7 +46,7 @@ public class MainActivity extends AppCompatActivity {
         username = findViewById(R.id.email);
         pass = findViewById(R.id.pass);
 
-        ComponentName receiver = new ComponentName(this, LocationUpdates.class);
+        ComponentName receiver = new ComponentName(this, TrackingService.class);
         PackageManager pm = getPackageManager();
 
         pm.setComponentEnabledSetting(receiver,
@@ -54,25 +54,31 @@ public class MainActivity extends AppCompatActivity {
                 PackageManager.DONT_KILL_APP);
 
         userId = mAuth.getCurrentUser();
-
-        mAuth.addAuthStateListener(new FirebaseAuth.AuthStateListener() {
-            @Override
-            public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
-                FirebaseUser user = firebaseAuth.getCurrentUser();
-                if (user != null) {
-                    int fine_location = ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION);
-                    if (fine_location != PackageManager.PERMISSION_GRANTED) {
-                        String[] permissions = new String[]{
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION
-                        };
-                        ActivityCompat.requestPermissions(MainActivity.this, permissions,
-                                PERMISSION_REQUEST);
+        if (userId != null) {
+            mAuth.addAuthStateListener(new FirebaseAuth.AuthStateListener() {
+                @Override
+                public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
+                    FirebaseUser user = firebaseAuth.getCurrentUser();
+                    if (user != null) {
+                        int fine_location = ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION);
+                        if (fine_location != PackageManager.PERMISSION_GRANTED) {
+                            String[] permissions = new String[]{
+                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION
+                            };
+                            ActivityCompat.requestPermissions(MainActivity.this, permissions,
+                                    PERMISSION_REQUEST);
+                        }
+                        startMapActivity(user.getUid());
                     }
-                    startMapActivity(user.getUid());
                 }
-            }
-        });
+            });
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
     }
 
     @Override
@@ -82,29 +88,31 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == PERMISSION_REQUEST) {
             if (grantResults.length <= 0) {
                 Log.i(TAG, "User interaction was cancelled.");
-            } else if ((grantResults[0] == PackageManager.PERMISSION_GRANTED)
-                    && (grantResults[1] == PackageManager.PERMISSION_GRANTED)) {
-                startMapActivity(userId.getUid());
             } else {
-                Snackbar.make(
-                        findViewById(R.id.activity_main),
-                        R.string.permission_denied_explanation,
-                        Snackbar.LENGTH_INDEFINITE)
-                        .setAction(R.string.settings, new View.OnClickListener() {
-                            @Override
-                            public void onClick(View view) {
-                                // Build intent that displays the App settings screen.
-                                Intent intent = new Intent();
-                                intent.setAction(
-                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                                Uri uri = Uri.fromParts("package",
-                                        BuildConfig.APPLICATION_ID, null);
-                                intent.setData(uri);
-                                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                startActivity(intent);
-                            }
-                        })
-                        .show();
+                if ((grantResults[0] == PackageManager.PERMISSION_GRANTED)
+                        && (grantResults[1] == PackageManager.PERMISSION_GRANTED)) {
+                    startMapActivity(userId.getUid());
+                } else {
+                    Snackbar.make(
+                            findViewById(R.id.activity_main),
+                            R.string.permission_denied_explanation,
+                            Snackbar.LENGTH_INDEFINITE)
+                            .setAction(R.string.settings, new View.OnClickListener() {
+                                @Override
+                                public void onClick(View view) {
+                                    // Build intent that displays the App settings screen.
+                                    Intent intent = new Intent();
+                                    intent.setAction(
+                                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                                    Uri uri = Uri.fromParts("package",
+                                            BuildConfig.APPLICATION_ID, null);
+                                    intent.setData(uri);
+                                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                    startActivity(intent);
+                                }
+                            })
+                            .show();
+                }
             }
         }
     }
@@ -117,19 +125,21 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 String user = username.getText().toString();
                 String password = pass.getText().toString();
-                mAuth.signInWithEmailAndPassword(user, password)
-                        .addOnSuccessListener(new OnSuccessListener<AuthResult>() {
-                            @Override
-                            public void onSuccess(AuthResult authResult) {
-                                startMapActivity(authResult.getUser().getUid());
-                            }
-                        })
-                        .addOnFailureListener(new OnFailureListener() {
-                            @Override
-                            public void onFailure(@NonNull Exception e) {
-                                Toast.makeText(MainActivity.this, e.toString(), Toast.LENGTH_SHORT).show();
-                            }
-                        });
+                if (userId == null) {
+                    mAuth.signInWithEmailAndPassword(user, password)
+                            .addOnSuccessListener(new OnSuccessListener<AuthResult>() {
+                                @Override
+                                public void onSuccess(AuthResult authResult) {
+                                    startMapActivity(authResult.getUser().getUid());
+                                }
+                            })
+                            .addOnFailureListener(new OnFailureListener() {
+                                @Override
+                                public void onFailure(@NonNull Exception e) {
+                                    Toast.makeText(MainActivity.this, e.toString(), Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                }
             }
         });
         register.setOnClickListener(new View.OnClickListener() {
@@ -155,16 +165,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    @Override
-    protected void onStop() {
-        super.onStop();
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-    }
-
     protected void startProfileActivity(String userId) {
         Intent profileActivityIntent = new Intent(MainActivity.this, ProfileActivity.class);
         profileActivityIntent.putExtra("userId", userId);
@@ -173,9 +173,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     protected void startMapActivity(String userId) {
-        Intent profileActivityIntent = new Intent(MainActivity.this, MapsActivity.class);
-        profileActivityIntent.putExtra("userId", userId);
-        startActivity(profileActivityIntent);
+        Intent mapActivityIntent = new Intent(MainActivity.this, MapsActivity.class);
+        mapActivityIntent.putExtra("userId", userId);
+        startActivity(mapActivityIntent);
         finish();
     }
 }
