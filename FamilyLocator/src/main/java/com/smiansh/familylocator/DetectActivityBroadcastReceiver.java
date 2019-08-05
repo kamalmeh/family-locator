@@ -80,7 +80,7 @@ public class DetectActivityBroadcastReceiver extends BroadcastReceiver {
                                 break;
                             case DetectedActivity.TILTING:
                                 msg = "Tilting ";
-                                requestInterval = 3000;
+                                requestInterval = 1000;
                                 Log.i(TAG, msg + da.getConfidence() + "%");
                                 startTrackingService(requestInterval, msg);
                                 break;

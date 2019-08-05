@@ -31,6 +31,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.facebook.login.LoginManager;
+import com.firebase.ui.auth.AuthUI;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdSize;
 import com.google.android.gms.ads.AdView;
@@ -146,6 +148,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         switch (item.getItemId()) {
             case R.id.signout:
                 FirebaseAuth.getInstance().signOut();
+                LoginManager.getInstance().logOut();
+                AuthUI.getInstance().signOut(getApplicationContext());
                 myHelper.destroyAlarm();
                 myHelper.stopTrackingService(this);
                 finish();
@@ -154,13 +158,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 Intent intentProfile = new Intent(this, ProfileActivity.class);
                 intentProfile.putExtra("userId", userId);
                 startActivity(intentProfile);
-                finish();
                 break;
             case R.id.addMember:
                 Intent intentAddMember = new Intent(this, AddMemberActivity.class);
                 intentAddMember.putExtra("userId", userId);
                 startActivity(intentAddMember);
-                finish();
                 break;
             case R.id.shareLocation:
                 final DocumentReference docRef = db.collection("users").document(userId);
@@ -215,7 +217,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 Toast.makeText(MapsActivity.this, e.toString(), Toast.LENGTH_SHORT).show();
                             }
                         });
-                finish();
                 break;
             default:
                 return super.onOptionsItemSelected(item);
@@ -266,18 +267,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     @Override
-    protected void onStop() {
-        super.onStop();
-//        requestLocationUpdates(null);
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-//        requestLocationUpdates(null);
-    }
-
-    @Override
     protected void onStart() {
         super.onStart();
         initialize();
@@ -312,7 +301,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             }
         });
-
         locateFamily();
         subscribeToLocations();
     }
@@ -378,55 +366,59 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void subscribeToLocations() {
-        DocumentReference docRef = db.collection("users").document(userId);
-        docRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
-            @Override
-            public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
-                if (documentSnapshot != null) {
-                    setMarker(documentSnapshot);
+        try {
+            DocumentReference docRef = db.collection("users").document(userId);
+            docRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
+                @Override
+                public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
+                    if (documentSnapshot != null) {
+                        setMarker(documentSnapshot);
+                    }
                 }
-            }
-        });
-        docRef.get()
-                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
-                    @Override
-                    public void onSuccess(DocumentSnapshot documentSnapshot) {
-                        //noinspection unchecked
-                        Map<String, Object> family = (Map<String, Object>) documentSnapshot.get("family");
-                        if (family != null) {
-                            for (Map.Entry<String, Object> entry : family.entrySet()) {
-                                DocumentReference memberRef = db.document(entry.getValue().toString());
-                                memberRef.get()
-                                        .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
-                                            @Override
-                                            public void onSuccess(DocumentSnapshot documentSnapshot) {
+            });
+            docRef.get()
+                    .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                        @Override
+                        public void onSuccess(DocumentSnapshot documentSnapshot) {
+                            //noinspection unchecked
+                            Map<String, Object> family = (Map<String, Object>) documentSnapshot.get("family");
+                            if (family != null) {
+                                for (Map.Entry<String, Object> entry : family.entrySet()) {
+                                    DocumentReference memberRef = db.document(entry.getValue().toString());
+                                    memberRef.get()
+                                            .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                                                @Override
+                                                public void onSuccess(DocumentSnapshot documentSnapshot) {
+                                                    setMarker(documentSnapshot);
+                                                }
+                                            })
+                                            .addOnFailureListener(new OnFailureListener() {
+                                                @Override
+                                                public void onFailure(@NonNull Exception e) {
+                                                    e.printStackTrace();
+                                                }
+                                            });
+                                    memberRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
+                                        @Override
+                                        public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
+                                            if (documentSnapshot != null) {
                                                 setMarker(documentSnapshot);
                                             }
-                                        })
-                                        .addOnFailureListener(new OnFailureListener() {
-                                            @Override
-                                            public void onFailure(@NonNull Exception e) {
-                                                e.printStackTrace();
-                                            }
-                                        });
-                                memberRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
-                                    @Override
-                                    public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
-                                        if (documentSnapshot != null) {
-                                            setMarker(documentSnapshot);
                                         }
-                                    }
-                                });
+                                    });
+                                }
                             }
                         }
-                    }
-                })
-                .addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
+                    })
+                    .addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
 
-                    }
-                });
+                        }
+                    });
+        } catch (NullPointerException e) {
+            e.printStackTrace();
+        }
     }
 
     private void setMarker(DocumentSnapshot dataSnapshot) {
@@ -480,42 +472,46 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void locateFamily() {
-        myHelper.getUserData().get()
-                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
-                    @Override
-                    public void onSuccess(DocumentSnapshot documentSnapshot) {
-                        try {
-                            //noinspection unchecked
-                            Map<String, Object> family = (Map<String, Object>) documentSnapshot.get("family");
-                            if (family != null) {
-                                for (Map.Entry row : family.entrySet()) {
-                                    DocumentReference localDocRef = db.document(row.getValue().toString());
-                                    localDocRef.get()
-                                            .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
-                                                @Override
-                                                public void onSuccess(DocumentSnapshot documentSnapshot) {
-                                                    setMarker(documentSnapshot);
-                                                }
-                                            })
-                                            .addOnFailureListener(new OnFailureListener() {
-                                                @Override
-                                                public void onFailure(@NonNull Exception e) {
-                                                    e.printStackTrace();
-                                                }
-                                            });
+        try {
+            myHelper.getUserData().get()
+                    .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                        @Override
+                        public void onSuccess(DocumentSnapshot documentSnapshot) {
+                            try {
+                                //noinspection unchecked
+                                Map<String, Object> family = (Map<String, Object>) documentSnapshot.get("family");
+                                if (family != null) {
+                                    for (Map.Entry row : family.entrySet()) {
+                                        DocumentReference localDocRef = db.document(row.getValue().toString());
+                                        localDocRef.get()
+                                                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                                                    @Override
+                                                    public void onSuccess(DocumentSnapshot documentSnapshot) {
+                                                        setMarker(documentSnapshot);
+                                                    }
+                                                })
+                                                .addOnFailureListener(new OnFailureListener() {
+                                                    @Override
+                                                    public void onFailure(@NonNull Exception e) {
+                                                        e.printStackTrace();
+                                                    }
+                                                });
+                                    }
                                 }
+                            } catch (SecurityException e) {
+                                e.printStackTrace();
                             }
-                        } catch (SecurityException e) {
+                        }
+                    })
+                    .addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
                             e.printStackTrace();
                         }
-                    }
-                })
-                .addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        e.printStackTrace();
-                    }
-                });
+                    });
+        } catch (NullPointerException e) {
+            e.printStackTrace();
+        }
     }
 
     class MarkerParams {

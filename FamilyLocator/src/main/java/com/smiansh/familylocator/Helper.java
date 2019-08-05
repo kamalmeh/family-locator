@@ -50,7 +50,11 @@ class Helper {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         userColl = db.collection("users");
         authColl = db.collection("authcodes");
-        userData = db.collection("users").document(currUser.getUid());
+        try {
+            userData = db.collection("users").document(currUser.getUid());
+        } catch (NullPointerException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void setChannel(String channel) {

@@ -91,12 +91,18 @@ public class TrackingService extends Service {
             return START_STICKY;
         }
         client.requestLocationUpdates(mLocationRequest, locationCallback, null);
-        myHelper.sendNote(getString(R.string.app_name), getString(R.string.notification_message, activity));
+//        myHelper.sendNote(getString(R.string.app_name), getString(R.string.notification_message, activity));
+        myHelper.sendNote(getString(R.string.app_name), getString(R.string.notification_message));
         return START_STICKY;
     }
 
     private void updateToDatabase(Location location) {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        FirebaseUser user = null;
+        try {
+            user = FirebaseAuth.getInstance().getCurrentUser();
+        } catch (NullPointerException e) {
+            e.printStackTrace();
+        }
         if (user != null) {
             userId = user.getUid();
         }
@@ -132,7 +138,7 @@ public class TrackingService extends Service {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             channel = new NotificationChannel(CHANNEL_ID, CHANNEL, NotificationManager.IMPORTANCE_DEFAULT);
         }
-        NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        NotificationManager notificationManager = ContextCompat.getSystemService(this, NotificationManager.class);
         if (notificationManager != null) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 notificationManager.createNotificationChannel(channel);
@@ -142,7 +148,8 @@ public class TrackingService extends Service {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_map_marker_point)
                 .setLargeIcon(bmp)
-                .setContentText(getString(R.string.notification_message, activity))
+//                .setContentText(getString(R.string.notification_message, activity))
+                .setContentText(getString(R.string.notification_message))
                 .setContentTitle(getString(R.string.app_name))
                 .setAutoCancel(true)
                 .setTimeoutAfter(10000)

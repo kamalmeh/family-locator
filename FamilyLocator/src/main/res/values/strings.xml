@@ -18,7 +18,17 @@
     <string name="date_format">ddMMyyyyHHmmss</string>
     <string name="channel">FAMILY_LOCATOR</string>
     <string name="channel_id">FAMILY_LOCATOR</string>
-    <string name="notification_message">Family Locator - Current Activity: %s</string>
+    <!--<string name="notification_message">Family Locator - Current Activity: %s</string>-->
+    <string name="notification_message">Family Locator is Running</string>
+    <string name="forgotpass">Forgot Password?</string>
+    <!--<string name="facebook_app_id">397053011014714</string>-->
+    <!--<string name="fb_login_protocol_scheme">fb397053011014714</string>-->
+    <!-- Facebook application ID and custom URL scheme (app ID prefixed by 'fb'). -->
+    <string name="facebook_application_id" translatable="false">397053011014714</string>
+    <string name="facebook_login_protocol_scheme" translatable="false">fb397053011014714</string>
+    <!-- Twitter consumer key and secret -->
+    <string name="twitter_consumer_key" translatable="false">YOUR_CONSUMER_KEY</string>
+    <string name="twitter_consumer_secret" translatable="false">YOUR_CONSUMER_SECRET</string>
     <plurals name="num_locations_reported">
         <item quantity="zero">No location reported</item>
         <item quantity="one">One location reported</item>
