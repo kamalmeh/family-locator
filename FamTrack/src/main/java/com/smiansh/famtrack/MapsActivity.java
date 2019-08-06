@@ -3,7 +3,6 @@ package com.smiansh.famtrack;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -27,6 +26,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -39,9 +39,6 @@ import com.firebase.ui.auth.AuthUI;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.MobileAds;
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -87,8 +84,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private static final String TAG = "MAPS_ACTIVITY";
     private static final int PERMISSION_REQUEST = 10;
     private GoogleMap mMap;
-    private FusedLocationProviderClient fusedLocationProviderClient;
-    private LocationRequest locationRequest;
     private static final String ALPHA_NUMERIC_STRING = "0123456789" +
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ" + "abcdefghijklmnopqrstuvwxyz";
     private String userId;
@@ -108,6 +103,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 builder.include(marker.getPosition());
             }
             mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 100));
+            recenter.setVisibility(View.GONE);
         }
     };
     private Button recenter;
@@ -264,6 +260,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         setContentView(R.layout.activity_maps);
         recenter = findViewById(R.id.recenter);
         recenter.setOnClickListener(recenterClickListener);
+        recenter.setVisibility(View.GONE);
         try {
             MobileAds.initialize(this, getString(R.string.ads));
             AdView mAdView = findViewById(R.id.adView);
@@ -282,8 +279,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         } catch (NullPointerException e) {
             e.printStackTrace();
         }
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-        prepareLocationRequest();
     }
 
     @Override
@@ -320,6 +315,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             @Override
             public void onCameraIdle() {
                 boundLatLong = true;
+            }
+        });
+        mMap.setOnCameraMoveStartedListener(new GoogleMap.OnCameraMoveStartedListener() {
+            @Override
+            public void onCameraMoveStarted(int i) {
+                recenter.setVisibility(View.VISIBLE);
             }
         });
         locateFamily();
@@ -359,30 +360,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                             .show();
                 }
             }
-        }
-    }
-
-    public void prepareLocationRequest() {
-        locationRequest = LocationRequest.create();
-        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        locationRequest.setInterval(1000);              //1 Second
-        locationRequest.setFastestInterval(1000);       //1 Second
-        locationRequest.setSmallestDisplacement(10);    //10 Meters
-        locationRequest.setMaxWaitTime(10000);          //10 Seconds
-        locationRequest.setNumUpdates(120);             //120 updates in a minute
-    }
-
-    private PendingIntent getPendingIntent() {
-        Intent intent = new Intent(this, LocationUpdates.class);
-        intent.setAction(LocationUpdates.PROCESS_LOCATION_UPDATES);
-        return PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-    }
-
-    public void requestLocationUpdates(View view) {
-        try {
-            fusedLocationProviderClient.requestLocationUpdates(locationRequest, getPendingIntent());
-        } catch (SecurityException e) {
-            Toast.makeText(this, "Security Exception", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -443,7 +420,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void setMarker(DocumentSnapshot dataSnapshot) {
-        String title = "Address";
+        String title = dataSnapshot.getString("firstName");
+        String address = "Address";
         List<Address> addressList;
         GeoPoint geoPoint = dataSnapshot.getGeoPoint("location");
         String uid = dataSnapshot.getId();
@@ -456,16 +434,19 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             try {
                 addressList = geocoder.getFromLocation(location.latitude, location.longitude, 1);
                 if (addressList.size() > 0) {
-                    title = addressList.get(0).getAddressLine(0);
+                    address = addressList.get(0).getAddressLine(0);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
             if (!mMarkers.containsKey(title)) {
+                InfoWindowData info = createCustomInfoWindow(address);
                 mOpt = new MarkerOptions().title(title).position(location);
                 downloadProfileImage(uid, title);
                 mOpt.icon(BitmapDescriptorFactory.fromBitmap(createCustomMarker(MapsActivity.this, bmp)));
-                mMarkers.put(title, mMap.addMarker(mOpt));
+                Marker newMarker = mMap.addMarker(mOpt);
+                newMarker.setTag(info);
+                mMarkers.put(title, newMarker);
             } else {
                 Objects.requireNonNull(mMarkers.get(title)).setPosition(location);
                 //downloadProfileImage(uid, title);
@@ -476,8 +457,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     builder.include(marker.getPosition());
                 }
                 mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 100));
+                recenter.setVisibility(View.GONE);
             } else {
                 Objects.requireNonNull(mMarkers.get(title)).setPosition(location);
+                recenter.setVisibility(View.VISIBLE);
             }
         }
     }
@@ -559,6 +542,14 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
+    InfoWindowData createCustomInfoWindow(String address) {
+        InfoWindowData info = new InfoWindowData();
+        info.setAddress(address);
+        CustomInfoWindowGoogleMap customInfoWindow = new CustomInfoWindowGoogleMap(this);
+        mMap.setInfoWindowAdapter(customInfoWindow);
+        return info;
+    }
+
     @SuppressLint("StaticFieldLeak")
     class DownloadFilesTask extends AsyncTask<MarkerParams, Void, Void> {
 
@@ -582,13 +573,60 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     @Override
                     public void run() {
                         mOpt = new MarkerOptions().title(title).position(m.getPosition());
+                        String address = "Address";
+                        List<Address> addressList;
+                        Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
+                        try {
+                            addressList = geocoder.getFromLocation(m.getPosition().latitude, m.getPosition().longitude, 1);
+                            if (addressList.size() > 0) {
+                                address = addressList.get(0).getAddressLine(0);
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        InfoWindowData info = createCustomInfoWindow(address);
                         mOpt.icon(BitmapDescriptorFactory.fromBitmap(createCustomMarker(MapsActivity.this, bitmap)));
-                        mMarkers.put(title, mMap.addMarker(mOpt));
+                        Marker newMarker = mMap.addMarker(mOpt);
+                        newMarker.setTag(info);
+                        mMarkers.put(title, newMarker);
                         m.remove();
                     }
                 });
             }
             return null;
+        }
+    }
+
+    class CustomInfoWindowGoogleMap implements GoogleMap.InfoWindowAdapter {
+
+        private Context context;
+
+        CustomInfoWindowGoogleMap(Context ctx) {
+            context = ctx;
+        }
+
+        @Override
+        public View getInfoWindow(Marker marker) {
+            return null;
+        }
+
+        @Override
+        public View getInfoContents(Marker marker) {
+            View view = ((Activity) context).getLayoutInflater()
+                    .inflate(R.layout.map_custom_infowindow, null);
+
+            TextView name_tv = view.findViewById(R.id.name);
+            TextView address = view.findViewById(R.id.address);
+
+            name_tv.setText(marker.getTitle());
+
+            InfoWindowData infoWindowData = (InfoWindowData) marker.getTag();
+
+            if (infoWindowData != null) {
+                address.setText(infoWindowData.getAddress());
+            }
+
+            return view;
         }
     }
 }

@@ -3,8 +3,6 @@
     xmlns:dist="http://schemas.android.com/apk/distribution"
     package="com.smiansh.famtrack">
 
-    <!--<uses-permission android:name="android.permission.INTERNET" />-->
-    <!--<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />-->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -34,8 +32,7 @@
 
         <receiver
             android:name="com.smiansh.famtrack.DetectActivityBroadcastReceiver"
-            android:enabled="true"
-            android:exported="true" />
+            android:enabled="true" />
 
         <service
             android:name="com.smiansh.famtrack.DetectActivityIntentService"
@@ -53,28 +50,6 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.smiansh.famtrack.MapsActivity" />
         </activity>
-
-        <!--<meta-data-->
-        <!--android:name="com.facebook.sdk.ApplicationId"-->
-        <!--android:value="@string/facebook_app_id" />-->
-
-        <!--<activity-->
-        <!--android:name="com.facebook.FacebookActivity"-->
-        <!--tools:replace="android:value"-->
-        <!--android:configChanges="keyboard|keyboardHidden|screenLayout|screenSize|orientation"-->
-        <!--android:label="@string/app_name" />-->
-        <!--<activity-->
-        <!--android:name="com.facebook.CustomTabActivity"-->
-        <!--android:exported="true">-->
-        <!--<intent-filter>-->
-        <!--<action android:name="android.intent.action.VIEW" />-->
-
-        <!--<category android:name="android.intent.category.DEFAULT" />-->
-        <!--<category android:name="android.intent.category.BROWSABLE" />-->
-
-        <!--<data android:scheme="@string/fb_login_protocol_scheme" />-->
-        <!--</intent-filter>-->
-        <!--</activity>-->
         <activity android:name="com.smiansh.famtrack.AddMemberActivity">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -88,16 +63,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
-        </receiver> <!-- <receiver -->
-        <!-- android:name=".LocationUpdates" -->
-        <!-- android:permission="android.permission.RECEIVE_BOOT_COMPLETED"> -->
-        <!-- <intent-filter> -->
-        <!-- <action android:name="famtracktionUpdates.ACTION_PROCESS_UPDATES" /> -->
-        <!-- </intent-filter> -->
-        <!-- <intent-filter> -->
-        <!-- <action android:name="android.intent.action.BOOT_COMPLETED" /> -->
-        <!-- </intent-filter> -->
-        <!-- </receiver> -->
+        </receiver>
         <meta-data
             android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />
@@ -119,8 +85,6 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <action android:name="android.intent.action.VIEW" />
-
-                <!--<category android:name="android.intent.category.LAUNCHER" />-->
             </intent-filter>
         </activity>
     </application>
