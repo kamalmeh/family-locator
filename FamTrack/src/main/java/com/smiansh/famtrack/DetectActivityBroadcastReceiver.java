@@ -45,7 +45,7 @@ public class DetectActivityBroadcastReceiver extends BroadcastReceiver {
                             case DetectedActivity.STILL:
                                 msg = "Stationary ";
                                 Log.i(TAG, msg + da.getConfidence() + "%");
-                                requestInterval = 300000;
+                                requestInterval = 600000;
                                 startTrackingService(requestInterval, msg);
                                 break;
                             case DetectedActivity.WALKING:

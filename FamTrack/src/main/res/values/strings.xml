@@ -12,6 +12,8 @@
     <string name="authcode_button_hint">Add Member to track location</string>
     <string name="authcode_button_text">Add</string>
     <string name="email_hint">Email Address</string>
+    <string name="content_descr">Application Logo</string>
+    <string name="recenter">Recenter</string>
     <string name="pass_hint">Password</string>
     <string name="signin">SignIn</string>
     <string name="register">Register</string>

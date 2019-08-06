@@ -11,6 +11,8 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.location.Address;
+import android.location.Geocoder;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -24,6 +26,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -34,7 +37,6 @@ import androidx.core.content.ContextCompat;
 import com.facebook.login.LoginManager;
 import com.firebase.ui.auth.AuthUI;
 import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.AdSize;
 import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -71,6 +73,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -94,8 +97,20 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private HashMap<String, Marker> mMarkers = new HashMap<>();
     private Bitmap bmp = null;
     private SharedPreferences sp = null;
-    private AdView mAdView;
     private Helper myHelper;
+    private static boolean boundLatLong = true;
+    View.OnClickListener recenterClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            boundLatLong = true;
+            LatLngBounds.Builder builder = new LatLngBounds.Builder();
+            for (Marker marker : mMarkers.values()) {
+                builder.include(marker.getPosition());
+            }
+            mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 100));
+        }
+    };
+    private Button recenter;
 
     public static Bitmap createCustomMarker(Context context, Bitmap bmp) {
 
@@ -140,6 +155,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         initialize();
         locateFamily();
         subscribeToLocations();
+        recenter.setOnClickListener(recenterClickListener);
 //        requestLocationUpdates(null);
     }
 
@@ -246,12 +262,16 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         myHelper = new Helper(getApplicationContext());
         myHelper.createAlarm(60000);
         setContentView(R.layout.activity_maps);
-        MobileAds.initialize(this, getString(R.string.ads));
-        mAdView = findViewById(R.id.adView);
-        mAdView.setAdSize(AdSize.SMART_BANNER);
-        mAdView.setAdUnitId(getString(R.string.ads));
-        AdRequest adRequest = new AdRequest.Builder().build();
-        mAdView.loadAd(adRequest);
+        recenter = findViewById(R.id.recenter);
+        recenter.setOnClickListener(recenterClickListener);
+        try {
+            MobileAds.initialize(this, getString(R.string.ads));
+            AdView mAdView = findViewById(R.id.adView);
+            AdRequest adRequest = new AdRequest.Builder().build();
+            mAdView.loadAd(adRequest);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -292,13 +312,14 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             @Override
             public boolean onMarkerClick(Marker marker) {
 //                Toast.makeText(MapsActivity.this, marker.getTitle() + " clicked", Toast.LENGTH_SHORT).show();
+                boundLatLong = false;
                 return false;
             }
         });
-        mMap.setOnInfoWindowLongClickListener(new GoogleMap.OnInfoWindowLongClickListener() {
+        mMap.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
             @Override
-            public void onInfoWindowLongClick(Marker marker) {
-
+            public void onCameraIdle() {
+                boundLatLong = true;
             }
         });
         locateFamily();
@@ -422,7 +443,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void setMarker(DocumentSnapshot dataSnapshot) {
-        final String title = dataSnapshot.getString("firstName");
+        String title = "Address";
+        List<Address> addressList;
         GeoPoint geoPoint = dataSnapshot.getGeoPoint("location");
         String uid = dataSnapshot.getId();
         LatLng location = null;
@@ -430,6 +452,15 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             location = new LatLng(geoPoint.getLatitude(), geoPoint.getLongitude());
         }
         if (location != null) {
+            Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+            try {
+                addressList = geocoder.getFromLocation(location.latitude, location.longitude, 1);
+                if (addressList.size() > 0) {
+                    title = addressList.get(0).getAddressLine(0);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             if (!mMarkers.containsKey(title)) {
                 mOpt = new MarkerOptions().title(title).position(location);
                 downloadProfileImage(uid, title);
@@ -437,13 +468,17 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 mMarkers.put(title, mMap.addMarker(mOpt));
             } else {
                 Objects.requireNonNull(mMarkers.get(title)).setPosition(location);
-                downloadProfileImage(uid, title);
+                //downloadProfileImage(uid, title);
             }
-            LatLngBounds.Builder builder = new LatLngBounds.Builder();
-            for (Marker marker : mMarkers.values()) {
-                builder.include(marker.getPosition());
+            if (boundLatLong) {
+                LatLngBounds.Builder builder = new LatLngBounds.Builder();
+                for (Marker marker : mMarkers.values()) {
+                    builder.include(marker.getPosition());
+                }
+                mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 100));
+            } else {
+                Objects.requireNonNull(mMarkers.get(title)).setPosition(location);
             }
-            mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 100));
         }
     }
 
