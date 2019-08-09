@@ -144,7 +144,7 @@ public class TrackingService extends Service {
                 notificationManager.createNotificationChannel(channel);
             }
         }
-        Bitmap bmp = myHelper.getBitmap(R.drawable.ic_map_marker_point);
+        Bitmap bmp = myHelper.getBitmap();
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_map_marker_point)
                 .setLargeIcon(bmp)

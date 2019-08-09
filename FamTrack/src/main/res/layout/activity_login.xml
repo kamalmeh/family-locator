@@ -9,27 +9,29 @@
 
     <LinearLayout
         android:id="@+id/label"
-        android:layout_width="match_parent"
+        android:layout_width="400dp"
         android:layout_height="400dp"
         android:layout_marginTop="30dp"
         android:orientation="vertical"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/login"
         app:layout_constraintTop_toTopOf="parent">
 
         <TextView
             android:id="@+id/greeting"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
+            android:layout_height="100dp"
+            android:drawableBottom="@drawable/ic_map_marker_point"
             android:text="@string/welcome_text"
             android:textAlignment="center"
             app:autoSizeTextType="uniform" />
 
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@drawable/ic_map_marker_point"
-            android:contentDescription="@string/content_descr" />
+        <!--<ImageView-->
+        <!--android:layout_width="match_parent"-->
+        <!--android:layout_height="match_parent"-->
+        <!--android:background="@drawable/ic_map_marker_point"-->
+        <!--android:contentDescription="@string/content_descr" />-->
     </LinearLayout>
 
     <Button

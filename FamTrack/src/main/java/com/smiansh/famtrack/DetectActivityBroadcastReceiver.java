@@ -32,7 +32,6 @@ public class DetectActivityBroadcastReceiver extends BroadcastReceiver {
         if (intent != null) {
             ActivityRecognitionResult result = ActivityRecognitionResult.extractResult(intent);
             final String action = intent.getAction();
-            Helper myHelper = new Helper(context);
             if (ACTION_DETECT.equals(action)) {
                 @SuppressWarnings("unchecked") ArrayList<DetectedActivity> detectedActivities = (ArrayList) result.getProbableActivities();
                 // Log each activity.
@@ -85,7 +84,6 @@ public class DetectActivityBroadcastReceiver extends BroadcastReceiver {
                                 startTrackingService(requestInterval, msg);
                                 break;
                         }
-//                        myHelper.sendNote(context.getString(R.string.app_name), msg + da.getConfidence() + "%\nInterval updated to " + requestInterval);
                     }
                 }
             }

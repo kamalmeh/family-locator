@@ -23,47 +23,47 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name="com.smiansh.famtrack.LoginActivity">
+        <activity android:name=".BuySubscriptionActivity"></activity>
+        <activity android:name=".LoginActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
         <receiver
-            android:name="com.smiansh.famtrack.DetectActivityBroadcastReceiver"
+            android:name=".DetectActivityBroadcastReceiver"
             android:enabled="true" />
 
         <service
-            android:name="com.smiansh.famtrack.DetectActivityIntentService"
-            android:exported="false" />
-        <service
-            android:name="com.smiansh.famtrack.TrackingService"
+            android:name=".TrackingService"
             android:enabled="true" />
 
         <meta-data
             android:name="com.google.android.gms.car.application"
             android:resource="@xml/automotive_app_desc" />
 
-        <activity android:name="com.smiansh.famtrack.ShareCodeActivity">
+        <activity android:name=".ShareCodeActivity">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.smiansh.famtrack.MapsActivity" />
         </activity>
-        <activity android:name="com.smiansh.famtrack.AddMemberActivity">
+        <activity android:name=".AddMemberActivity">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.smiansh.famtrack.MapsActivity" />
         </activity>
 
         <receiver
-            android:name="com.smiansh.famtrack.AlarmHandler"
+            android:name=".AlarmHandler"
             android:enabled="true"
             android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
         <meta-data
             android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />
@@ -78,10 +78,10 @@
             android:value="ca-app-pub-3913708046171541~1206325256" />
 
         <activity
-            android:name="com.smiansh.famtrack.MapsActivity"
+            android:name=".MapsActivity"
             android:label="@string/title_activity_maps" />
-        <activity android:name="com.smiansh.famtrack.ProfileActivity" />
-        <activity android:name="com.smiansh.famtrack.MainActivity">
+        <activity android:name=".ProfileActivity" />
+        <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <action android:name="android.intent.action.VIEW" />

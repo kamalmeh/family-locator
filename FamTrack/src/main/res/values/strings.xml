@@ -22,11 +22,13 @@
     <string name="date_format">ddMMyyyyHHmmss</string>
     <string name="channel">FAMILY_LOCATOR</string>
     <string name="channel_id">FAMILY_LOCATOR</string>
+    <string name="inappmsg">In-App Product Configuration Error. Please change the code to accommodate</string>
     <!--<string name="notification_message">Family Locator - Current Activity: %s</string>-->
     <string name="notification_message">Safe Circle is Running</string>
     <string name="forgotpass">Forgot Password?</string>
     <string name="exittext">Exit</string>
     <string name="logintext">Login</string>
+    <string name="test">Test</string>
     <!--<string name="facebook_app_id">397053011014714</string>-->
     <!--<string name="fb_login_protocol_scheme">fb397053011014714</string>-->
     <!-- Facebook application ID and custom URL scheme (app ID prefixed by 'fb'). -->

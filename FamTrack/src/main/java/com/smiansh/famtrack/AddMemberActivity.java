@@ -1,5 +1,6 @@
 package com.smiansh.famtrack;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
@@ -32,13 +33,16 @@ public class AddMemberActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_member);
-        try {
-            MobileAds.initialize(this, getString(R.string.ads));
-            AdView mAdView = findViewById(R.id.adView);
-            AdRequest adRequest = new AdRequest.Builder().build();
-            mAdView.loadAd(adRequest);
-        } catch (Exception e) {
-            e.printStackTrace();
+        Helper myHelper = new Helper(this);
+        if (myHelper.isAdsEnabled()) {
+            try {
+                MobileAds.initialize(this, getString(R.string.ads));
+                AdView mAdView = findViewById(R.id.adView);
+                AdRequest adRequest = new AdRequest.Builder().build();
+                mAdView.loadAd(adRequest);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
         Button addButton = findViewById(R.id.addButton);
         authCode = findViewById(R.id.authCode);
@@ -53,6 +57,7 @@ public class AddMemberActivity extends AppCompatActivity {
                     Toast.makeText(AddMemberActivity.this, "Invalid User Session", Toast.LENGTH_SHORT).show();
                     return;
                 }
+
                 final String memberAuthCode = authCode.getText().toString();
                 if (memberAuthCode.isEmpty()) {
                     authCode.setHintTextColor(Color.RED);
@@ -85,19 +90,21 @@ public class AddMemberActivity extends AppCompatActivity {
                             @Override
                             public void onSuccess(DocumentSnapshot documentSnapshot) {
                                 if (documentSnapshot != null) {
+                                    String purchaseLicence = documentSnapshot.getString("purchaseLicence");
                                     Map<String, String> family;
                                     //noinspection unchecked
                                     family = (Map<String, String>) documentSnapshot.get("family");
                                     if (family == null) {
                                         family = new HashMap<>();
                                     }
-                                    family.put(memberId, "/users/" + memberId);
-                                    Map<String, Object> familyData = new HashMap<>();
-                                    familyData.put("family." + memberId, "/users/" + memberId);
-                                    docRef.update(familyData);
-//                                    Intent mapActivity = new Intent(getApplicationContext(), MapsActivity.class);
-//                                    mapActivity.putExtra("userId", userId);
-//                                    startActivity(mapActivity);
+                                    if (purchaseLicence == null && family.size() == 1) {
+                                        startActivity(new Intent(getApplicationContext(), BuySubscriptionActivity.class));
+                                    } else {
+                                        family.put(memberId, "/users/" + memberId);
+                                        Map<String, Object> familyData = new HashMap<>();
+                                        familyData.put("family." + memberId, "/users/" + memberId);
+                                        docRef.update(familyData);
+                                    }
                                 }
                             }
                         });

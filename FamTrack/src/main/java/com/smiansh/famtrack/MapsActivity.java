@@ -5,7 +5,6 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -15,7 +14,6 @@ import android.location.Geocoder;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -91,7 +89,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private MarkerOptions mOpt = null;
     private HashMap<String, Marker> mMarkers = new HashMap<>();
     private Bitmap bmp = null;
-    private SharedPreferences sp = null;
     private Helper myHelper;
     private static boolean boundLatLong = true;
     View.OnClickListener recenterClickListener = new View.OnClickListener() {
@@ -139,7 +136,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         try {
             userId = Objects.requireNonNull(FirebaseAuth.getInstance().getCurrentUser()).getUid();
             db = FirebaseFirestore.getInstance();
-            sp = PreferenceManager.getDefaultSharedPreferences(this);
         } catch (NullPointerException e) {
             e.printStackTrace();
         }
@@ -261,18 +257,19 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         recenter = findViewById(R.id.recenter);
         recenter.setOnClickListener(recenterClickListener);
         recenter.setVisibility(View.GONE);
-        try {
-            MobileAds.initialize(this, getString(R.string.ads));
-            AdView mAdView = findViewById(R.id.adView);
-            AdRequest adRequest = new AdRequest.Builder().build();
-            mAdView.loadAd(adRequest);
-        } catch (Exception e) {
-            e.printStackTrace();
+        if (myHelper.isAdsEnabled()) {
+            try {
+                MobileAds.initialize(this, getString(R.string.ads));
+                AdView mAdView = findViewById(R.id.adView);
+                AdRequest adRequest = new AdRequest.Builder().build();
+                mAdView.loadAd(adRequest);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
-        sp = PreferenceManager.getDefaultSharedPreferences(this);
         try {
             assert mapFragment != null;
             mapFragment.getMapAsync(this);

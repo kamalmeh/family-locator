@@ -21,6 +21,15 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.android.billingclient.api.BillingClient;
+import com.android.billingclient.api.BillingClientStateListener;
+import com.android.billingclient.api.BillingResult;
+import com.android.billingclient.api.Purchase;
+import com.android.billingclient.api.PurchasesUpdatedListener;
+import com.android.billingclient.api.SkuDetails;
+import com.android.billingclient.api.SkuDetailsParams;
+import com.android.billingclient.api.SkuDetailsResponseListener;
+import com.android.vending.billing.IInAppBillingService;
 import com.facebook.AccessToken;
 import com.facebook.CallbackManager;
 import com.facebook.FacebookCallback;
@@ -40,7 +49,10 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-public class MainActivity extends AppCompatActivity {
+import java.util.ArrayList;
+import java.util.List;
+
+public class MainActivity extends AppCompatActivity implements PurchasesUpdatedListener {
     private static final String TAG = "MAIN_ACTIVITY";
     private static final int PERMISSION_REQUEST = 10;
 
@@ -52,6 +64,8 @@ public class MainActivity extends AppCompatActivity {
 
     private FirebaseAuth mAuth;
     private FirebaseUser userId;
+    private BillingClient billingClient;
+    private IInAppBillingService inAppBillingService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,6 +80,41 @@ public class MainActivity extends AppCompatActivity {
         forgotPass = findViewById(R.id.forgotPass);
         forgotPass.setMovementMethod(LinkMovementMethod.getInstance());
         loginButton = findViewById(R.id.login_button);
+
+        billingClient = BillingClient.newBuilder(this).setListener(this).build();
+        billingClient.startConnection(new BillingClientStateListener() {
+            @Override
+            public void onBillingSetupFinished(BillingResult billingResult) {
+                List<String> skuList = new ArrayList<>();
+                skuList.add("premium_upgrade");
+                skuList.add("gas");
+                SkuDetailsParams.Builder params = SkuDetailsParams.newBuilder();
+                params.setSkusList(skuList).setType(BillingClient.SkuType.INAPP);
+                billingClient.querySkuDetailsAsync(params.build(),
+                        new SkuDetailsResponseListener() {
+                            @Override
+                            public void onSkuDetailsResponse(BillingResult billingResult,
+                                                             List<SkuDetails> skuDetailsList) {
+                                if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && skuDetailsList != null) {
+                                    for (SkuDetails skuDetails : skuDetailsList) {
+                                        String sku = skuDetails.getSku();
+                                        String price = skuDetails.getPrice();
+                                        if ("premium_upgrade".equals(sku)) {
+                                            price = "1";
+                                        } else if ("gas".equals(sku)) {
+                                            price = "2";
+                                        }
+                                    }
+                                }
+                            }
+                        });
+            }
+
+            @Override
+            public void onBillingServiceDisconnected() {
+
+            }
+        });
 
         addFacebookLogin();
 
@@ -280,5 +329,10 @@ public class MainActivity extends AppCompatActivity {
         mapActivityIntent.putExtra("userId", userId);
         startActivity(mapActivityIntent);
         finish();
+    }
+
+    @Override
+    public void onPurchasesUpdated(BillingResult billingResult, @Nullable List<Purchase> purchases) {
+
     }
 }
