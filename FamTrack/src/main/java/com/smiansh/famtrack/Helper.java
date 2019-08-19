@@ -1,10 +1,12 @@
 package com.smiansh.famtrack;
 
+import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.TaskStackBuilder;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -13,12 +15,19 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
+import android.location.Address;
+import android.location.Geocoder;
 import android.net.Uri;
 import android.os.Build;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
+import android.telephony.SmsManager;
+import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -46,11 +55,16 @@ import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.GeoPoint;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+
+import de.hdodenhof.circleimageview.CircleImageView;
 
 import static android.content.Context.ALARM_SERVICE;
 
@@ -65,6 +79,8 @@ class Helper {
     private CollectionReference authColl;
     private FirebaseUser currUser;
     private boolean isAdsEnabled = false;
+    private NotificationManager notificationManager;
+    SmsManager sms = SmsManager.getDefault();
 
     Helper(Context ctx) {
         context = ctx;
@@ -177,30 +193,131 @@ class Helper {
         return null;
     }
 
-    void sendNote(String notificationTitle, String notificationMessage) {
-        setChannel(context.getString(R.string.channel));
-        setChannelId(context.getString(R.string.channel_id));
-        NotificationChannel channel = null;
+    Bitmap createCustomMarker(Context context, Bitmap bmp) {
+
+        View marker = ((LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(R.layout.custom_marker_layout, null);
+
+        CircleImageView markerImage = marker.findViewById(R.id.user_dp);
+        if (bmp == null)
+            markerImage.setImageResource(R.drawable.ic_boy);
+        else
+            markerImage.setImageBitmap(bmp);
+
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        ((Activity) context).getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        marker.setLayoutParams(new ViewGroup.LayoutParams(52, ViewGroup.LayoutParams.WRAP_CONTENT));
+        marker.measure(displayMetrics.widthPixels, displayMetrics.heightPixels);
+        marker.layout(0, 0, displayMetrics.widthPixels, displayMetrics.heightPixels);
+        marker.buildDrawingCache();
+        Bitmap bitmap = Bitmap.createBitmap(marker.getMeasuredWidth(), marker.getMeasuredHeight(), Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        marker.draw(canvas);
+
+        return bitmap;
+    }
+
+    Notification getNotification() {
+        String CHANNEL_ID = context.getString(R.string.app_name);
+        String CHANNEL = context.getString(R.string.channel);
+        Notification myNotification;
+        NotificationChannel channel;
+        notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             channel = new NotificationChannel(CHANNEL_ID, CHANNEL, NotificationManager.IMPORTANCE_DEFAULT);
-        }
-        NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
-        if (notificationManager != null) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            channel.setDescription("It's My Circle for my dear family members, relatives and friends");
+            channel.enableLights(true);
+            channel.setLightColor(R.color.colorPrimary);
+            channel.setShowBadge(true);
+            if (notificationManager != null) {
                 notificationManager.createNotificationChannel(channel);
             }
         }
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_map_marker_point)
-                .setContentText(notificationMessage)
-                .setContentTitle(notificationTitle)
+        Bitmap bmp = getBitmap();
+        // Add action button in the notification
+        Intent intent = new Intent(context, LoginActivity.class);
+        intent.putExtra("userId", currUser.getUid());
+        TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
+        stackBuilder.addNextIntentWithParentStack(intent);
+        PendingIntent pIntent = stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID);
+        builder.setSmallIcon(R.drawable.ic_map_marker_point)
+                .setLargeIcon(bmp)
+                .setContentIntent(pIntent)
+                .addAction(R.drawable.ic_paper_plane, "Open", pIntent)
+                .setStyle(new androidx.media.app.NotificationCompat.DecoratedMediaCustomViewStyle())
+                .setContentText(context.getString(R.string.notification_message))
                 .setAutoCancel(true)
                 .setTimeoutAfter(10000)
+                .setOngoing(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW);
-        Notification notification = builder.build();
+        myNotification = builder.build();
+        return myNotification;
+    }
+
+    void sendNote(String notificationTitle, String notificationMessage) {
+        setChannel(context.getString(R.string.channel));
+        setChannelId(context.getString(R.string.channel_id));
         if (notificationManager != null) {
-            notificationManager.notify(1, notification);
+            notificationManager.notify(1, getNotification());
         }
+    }
+
+    public void sendSMS(final String message) {
+        String userId = FirebaseAuth.getInstance().getUid();
+        final FirebaseFirestore db = FirebaseFirestore.getInstance();
+        db.document("users/" + userId).get()
+                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                    @Override
+                    public void onSuccess(DocumentSnapshot documentSnapshot) {
+                        final String firstName = documentSnapshot.getString("firstName");
+                        final GeoPoint location = documentSnapshot.getGeoPoint("location");
+                        if (location != null) {
+                            String address = "Address";
+                            List<Address> addressList;
+                            Geocoder geocoder = new Geocoder(context, Locale.getDefault());
+                            try {
+                                addressList = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+                                if (addressList.size() > 0) {
+                                    address = addressList.get(0).getAddressLine(0);
+                                }
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                            final String add = address;
+                            //noinspection unchecked
+                            Map<String, String> members = (Map<String, String>) documentSnapshot.get("family");
+                            if (members != null) {
+                                for (Map.Entry entry : members.entrySet()) {
+                                    db.document(entry.getValue().toString()).get()
+                                            .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                                                @Override
+                                                public void onSuccess(DocumentSnapshot documentSnapshot) {
+                                                    String number = documentSnapshot.getString("phone");
+                                                    String msg = message + "Address: " + add + " Latitude: " + location.getLatitude() + " Longitude: " + location.getLongitude();
+                                                    Intent intent = new Intent(context, DetectActivityBroadcastReceiver.class);
+                                                    intent.setAction(DetectActivityBroadcastReceiver.ACTION_PANIC_MSG_SENT);
+                                                    PendingIntent sentIntent = PendingIntent.getBroadcast(context, 0, intent, 0);
+                                                    intent = new Intent(context, DetectActivityBroadcastReceiver.class);
+                                                    intent.setAction(DetectActivityBroadcastReceiver.ACTION_PANIC_MSG_DELIVERED);
+                                                    PendingIntent deliveryIntent = PendingIntent.getBroadcast(context, 1, intent, 0);
+                                                    try {
+                                                        sms.sendTextMessage(number, null, msg + firstName, sentIntent, deliveryIntent);
+                                                    } catch (Exception e) {
+                                                        e.printStackTrace();
+                                                    }
+                                                }
+                                            });
+                                }
+                            }
+                        }
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        e.printStackTrace();
+                    }
+                });
     }
 
     CollectionReference getUserColl() {
@@ -229,10 +346,20 @@ class Helper {
 
     public class Subscription implements PurchasesUpdatedListener {
         private final String TAG = "SUBSCRIPTION";
+        //        private final String PREMIUM = "android.test.purchased";
         private final String PREMIUM = "premium";
         private BillingClient.Builder builder;
-        private BillingClient billingClient;
+        private BillingClient client;
         private List<SkuDetails> skuDetails;
+
+        Subscription() {
+            super();
+            billingClient();
+        }
+
+        BillingClient getClient() {
+            return client;
+        }
 
         @Override
         public void onPurchasesUpdated(BillingResult billingResult, @Nullable List<Purchase> purchases) {
@@ -270,7 +397,7 @@ class Helper {
                                                         AcknowledgePurchaseParams.newBuilder()
                                                                 .setPurchaseToken(purchase.getPurchaseToken())
                                                                 .build();
-                                                billingClient.acknowledgePurchase(acknowledgePurchaseParams, new AcknowledgePurchaseResponseListener() {
+                                                client.acknowledgePurchase(acknowledgePurchaseParams, new AcknowledgePurchaseResponseListener() {
                                                     @Override
                                                     public void onAcknowledgePurchaseResponse(BillingResult billingResult) {
                                                         if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
@@ -303,19 +430,22 @@ class Helper {
             builder = BillingClient.newBuilder(context).setListener(this);
         }
 
-        BillingClient getBillingClient() {
+        void billingClient() {
             createBuilder();
-            billingClient = builder.enablePendingPurchases().build();
-            billingClient.startConnection(new BillingClientStateListener() {
+            client = builder
+                    .enablePendingPurchases()
+                    .setListener(this)
+                    .build();
+            client.startConnection(new BillingClientStateListener() {
                 @Override
                 public void onBillingSetupFinished(final BillingResult billingResult) {
                     if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
 //                        Toast.makeText(context, "Billing Setup Finished", Toast.LENGTH_SHORT).show();
                         List<String> skuList = new ArrayList<>();
-                        skuList.add("premium");
+                        skuList.add(PREMIUM);
                         SkuDetailsParams.Builder params = SkuDetailsParams.newBuilder();
-                        params.setSkusList(skuList).setType(BillingClient.SkuType.INAPP);
-                        billingClient.querySkuDetailsAsync(params.build(),
+                        params.setSkusList(skuList).setType(BillingClient.SkuType.SUBS);
+                        client.querySkuDetailsAsync(params.build(),
                                 new SkuDetailsResponseListener() {
                                     @Override
                                     public void onSkuDetailsResponse(BillingResult billingResult,
@@ -326,6 +456,11 @@ class Helper {
                                     }
                                 });
                     }
+//                    try {
+//                        Thread.sleep(1000);
+//                    } catch (InterruptedException e) {
+//                        e.printStackTrace();
+//                    }
                 }
 
                 @Override
@@ -334,11 +469,29 @@ class Helper {
 //                    TODO: Add Retry billing connection setup
                 }
             });
-            return billingClient;
         }
 
         List<SkuDetails> getSkuDetails() {
-            getBillingClient();
+            //getBillingClient();
+//            List<String> skuList = new ArrayList<>();
+//            skuList.add(PREMIUM);
+//            SkuDetailsParams.Builder params = SkuDetailsParams.newBuilder();
+//            params.setSkusList(skuList).setType(BillingClient.SkuType.SUBS);
+//            billingClient.querySkuDetailsAsync(params.build(),
+//                    new SkuDetailsResponseListener() {
+//                        @Override
+//                        public void onSkuDetailsResponse(BillingResult billingResult,
+//                                                         List<SkuDetails> skuDetailsList) {
+//                            if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && skuDetailsList != null) {
+//                                skuDetails = skuDetailsList;
+//                            }
+//                        }
+//                    });
+//            try {
+//                Thread.sleep(1000);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
             return skuDetails;
         }
     }

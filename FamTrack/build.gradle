@@ -3,21 +3,16 @@ apply plugin: 'com.google.gms.google-services'
 
 android {
     signingConfigs {
-        debug {
-            storeFile file('D:\\Kamal\\Learning\\android\\FamilyLocator\\KeyStore\\key-google-play-store.jks')
-            storePassword 'dDyX2#K2W$'
-            keyAlias = 'googleplaykey'
-            keyPassword 'dDyX2#K2W$'
-        }
+
     }
     compileSdkVersion 29
     buildToolsVersion "29.0.0"
     defaultConfig {
         applicationId "com.smiansh.famtrack"
-        minSdkVersion 24
+        minSdkVersion 21
         targetSdkVersion 29
-        versionCode 3
-        versionName "1.1"
+        versionCode 9
+        versionName "1.9"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
