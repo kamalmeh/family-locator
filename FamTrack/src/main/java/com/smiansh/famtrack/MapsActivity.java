@@ -5,6 +5,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -104,6 +105,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     };
     private Button recenter;
+    private SharedPreferences sp;
 
     public static Bitmap createCustomMarker(Context context, Bitmap bmp) {
 
@@ -148,7 +150,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         locateFamily();
         subscribeToLocations();
         recenter.setOnClickListener(recenterClickListener);
-//        requestLocationUpdates(null);
     }
 
     @Override
@@ -296,7 +297,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION},
+                            Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.SEND_SMS},
                     PERMISSION_REQUEST);
         }
 
@@ -331,7 +332,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             if (grantResults.length <= 0) {
                 Log.i(TAG, "User interaction was cancelled.");
             } else {
-                if ((grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                if ((grantResults[0] == PackageManager.PERMISSION_GRANTED) && (grantResults[1] == PackageManager.PERMISSION_GRANTED)) {
                     // Permission was granted.
                     Log.i(TAG, "Permission was granted");
 //                    requestLocationUpdates(null);
@@ -488,6 +489,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private void locateFamily() {
         try {
+            mMap.clear();
+            mMarkers.clear();
             myHelper.getUserData().get()
                     .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
                         @Override

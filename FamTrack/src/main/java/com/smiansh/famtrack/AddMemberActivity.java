@@ -28,6 +28,7 @@ public class AddMemberActivity extends AppCompatActivity {
     private EditText authCode;
     private FirebaseFirestore db = FirebaseFirestore.getInstance();
     DocumentReference authRef;
+    private static int allowedMembers;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,6 +50,24 @@ public class AddMemberActivity extends AppCompatActivity {
         assert getSupportActionBar() != null;
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
+        db.document("/unlicenced/allowedMembers").get()
+                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                    @Override
+                    public void onSuccess(DocumentSnapshot documentSnapshot) {
+                        try {
+                            allowedMembers = Integer.parseInt(documentSnapshot.getString("allowed"));
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        e.printStackTrace();
+                    }
+                });
+
         addButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -63,6 +82,7 @@ public class AddMemberActivity extends AppCompatActivity {
                     authCode.setHintTextColor(Color.RED);
                     return;
                 }
+
                 authRef = db.collection("authcodes").document(memberAuthCode);
                 authRef.get()
                         .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
@@ -97,7 +117,7 @@ public class AddMemberActivity extends AppCompatActivity {
                                     if (family == null) {
                                         family = new HashMap<>();
                                     }
-                                    if (purchaseLicence == null && family.size() == 1) {
+                                    if (purchaseLicence == null && family.size() == allowedMembers) {
                                         startActivity(new Intent(getApplicationContext(), BuySubscriptionActivity.class));
                                     } else {
                                         family.put(memberId, "/users/" + memberId);

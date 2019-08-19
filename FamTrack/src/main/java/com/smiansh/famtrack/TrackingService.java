@@ -1,21 +1,15 @@
 package com.smiansh.famtrack;
 
 import android.Manifest;
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
 import android.location.Location;
-import android.os.Build;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
-import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -49,6 +43,7 @@ public class TrackingService extends Service {
     private Double lastLocationLong = 0.0;
     private long requestInterval = 60000;
     private String activity = "Stationary";
+    private int serviceId = 1;
 
     public TrackingService() {
         mLocationRequest = createLocationRequest();
@@ -92,7 +87,7 @@ public class TrackingService extends Service {
         }
         client.requestLocationUpdates(mLocationRequest, locationCallback, null);
 //        myHelper.sendNote(getString(R.string.app_name), getString(R.string.notification_message, activity));
-        myHelper.sendNote(getString(R.string.app_name), getString(R.string.notification_message));
+//        myHelper.sendNote(getString(R.string.app_name), getString(R.string.notification_message));
         return START_STICKY;
     }
 
@@ -130,41 +125,51 @@ public class TrackingService extends Service {
         return request;
     }
 
-    private Notification getNotification() {
-        String CHANNEL_ID = getString(R.string.app_name);
-        String CHANNEL = getString(R.string.channel);
-        Notification myNotification;
-        NotificationChannel channel = null;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            channel = new NotificationChannel(CHANNEL_ID, CHANNEL, NotificationManager.IMPORTANCE_DEFAULT);
-        }
-        NotificationManager notificationManager = ContextCompat.getSystemService(this, NotificationManager.class);
-        if (notificationManager != null) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                notificationManager.createNotificationChannel(channel);
-            }
-        }
-        Bitmap bmp = myHelper.getBitmap();
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_map_marker_point)
-                .setLargeIcon(bmp)
-//                .setContentText(getString(R.string.notification_message, activity))
-                .setContentText(getString(R.string.notification_message))
-                .setContentTitle(getString(R.string.app_name))
-                .setAutoCancel(true)
-                .setTimeoutAfter(10000)
-                .setPriority(NotificationCompat.PRIORITY_LOW);
-        myNotification = builder.build();
-
-        return myNotification;
-    }
+//    private Notification getNotification() {
+//        String CHANNEL_ID = getString(R.string.app_name);
+//        String CHANNEL = getString(R.string.channel);
+//        Notification myNotification;
+//        NotificationChannel channel;
+//        NotificationManager notificationManager = getSystemService(NotificationManager.class);
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//            channel = new NotificationChannel(CHANNEL_ID, CHANNEL, NotificationManager.IMPORTANCE_DEFAULT);
+//            channel.setDescription("It's My Circle for my dear family members, relatives and friends");
+//            channel.enableLights(true);
+//            if (notificationManager != null) {
+//                notificationManager.createNotificationChannel(channel);
+//            }
+//        }
+//        Bitmap bmp = myHelper.getBitmap();
+//        // Add action button in the notification
+//        Intent intent = new Intent(this, DetectActivityBroadcastReceiver.class);
+//        intent.setAction(DetectActivityBroadcastReceiver.ACTION_PANIC);
+//        intent.putExtra("EXTRA_NOTIFICATION_ID", serviceId);
+//        PendingIntent pIntent = PendingIntent.getBroadcast(this, 1, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+//
+//        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID);
+//
+//        builder.setSmallIcon(R.drawable.ic_map_marker_point)
+//                .setLargeIcon(bmp)
+//                .addAction(R.drawable.ic_paper_plane, "Panic Button", pIntent)
+//                .setStyle(new NotificationCompat.InboxStyle()
+//                        .setBigContentTitle("Your Current Location")
+//                        .setSummaryText(getString(R.string.notification_message))
+//                )
+//                .setPriority(NotificationManager.IMPORTANCE_MAX)
+////                .setAutoCancel(true)
+////                .setTimeoutAfter(10000)
+//                .setOngoing(true)
+//                .setPriority(NotificationCompat.PRIORITY_LOW);
+//        myNotification = builder.build();
+//
+//        return myNotification;
+//    }
 
     @Override
     public void onCreate() {
         super.onCreate();
-        int serviceId = 1;
         myHelper = new Helper(getApplicationContext());
-        startForeground(serviceId, getNotification());
+        startForeground(serviceId, myHelper.getNotification());
         sd = new SimpleDateFormat(getString(R.string.date_format), Locale.getDefault());
         sp = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         try {

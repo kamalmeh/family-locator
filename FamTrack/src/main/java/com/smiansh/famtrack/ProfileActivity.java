@@ -2,6 +2,7 @@ package com.smiansh.famtrack;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -28,6 +29,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -177,6 +179,7 @@ public class ProfileActivity extends AppCompatActivity {
                     firstName.setEnabled(true);
                     lastName.setEnabled(true);
                     phone.setEnabled(true);
+                    uploadImage.setEnabled(true);
                     update.setText("Update");
                 }
             }
@@ -213,7 +216,8 @@ public class ProfileActivity extends AppCompatActivity {
             if (grantResults.length <= 0) {
                 Log.i(TAG, "User interaction was cancelled.");
             } else {
-                if ((grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                if (grantResults[0] == PackageManager.PERMISSION_GRANTED &&
+                        grantResults[1] == PackageManager.PERMISSION_GRANTED) {
                     // Permission was granted.
                     Log.i(TAG, "Permission was granted");
                 } else {
@@ -304,6 +308,7 @@ public class ProfileActivity extends AppCompatActivity {
         firstName.setEnabled(false);
         lastName.setEnabled(false);
         phone.setEnabled(false);
+        uploadImage.setEnabled(false);
         update.setText("Edit");
 
         sp = PreferenceManager.getDefaultSharedPreferences(this);
@@ -383,32 +388,49 @@ public class ProfileActivity extends AppCompatActivity {
                 final String name = adapterView.getAdapter().getItem(i).toString().split("=")[0];
                 final String item = adapterView.getAdapter().getItem(i).toString().split("=")[1];
                 final DocumentReference docRef = db.document("users/" + userId);
-                docRef.get()
-                        .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                AlertDialog.Builder builder = new AlertDialog.Builder(ProfileActivity.this);
+                builder.setMessage(getString(R.string.delete_msg, name))
+                        .setTitle("Please Confirm Delete")
+                        .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                             @Override
-                            public void onSuccess(DocumentSnapshot documentSnapshot) {
-                                Map<String, Object> data = documentSnapshot.getData();
-                                if (data != null) {
-                                    //noinspection unchecked
-                                    Map<String, String> family = (Map<String, String>) data.get("family");
-                                    family.remove(item);
-                                    data.put("family", family);
-                                    docRef.set(data);
-                                    Toast.makeText(ProfileActivity.this, name + " deleted", Toast.LENGTH_LONG).show();
-                                    getProfileData();
-                                }
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                docRef.get()
+                                        .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                                            @Override
+                                            public void onSuccess(DocumentSnapshot documentSnapshot) {
+                                                Map<String, Object> data = documentSnapshot.getData();
+                                                if (data != null) {
+                                                    //noinspection unchecked
+                                                    Map<String, String> family = (Map<String, String>) data.get("family");
+                                                    family.remove(item);
+                                                    data.put("family", family);
+                                                    docRef.set(data);
+                                                    Toast.makeText(ProfileActivity.this, name + " deleted", Toast.LENGTH_LONG).show();
+                                                    getProfileData();
+                                                }
+                                            }
+                                        })
+                                        .addOnFailureListener(new OnFailureListener() {
+                                            @Override
+                                            public void onFailure(@NonNull Exception e) {
+                                                e.printStackTrace();
+                                            }
+                                        });
                             }
                         })
-                        .addOnFailureListener(new OnFailureListener() {
+                        .setNegativeButton("No", new DialogInterface.OnClickListener() {
                             @Override
-                            public void onFailure(@NonNull Exception e) {
-                                e.printStackTrace();
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                Toast.makeText(ProfileActivity.this, "Delete cancelled", Toast.LENGTH_SHORT).show();
                             }
-                        });
+                        })
+                        .create()
+                        .show();
                 return false;
             }
         });
     }
+
 
     private void downloadProfileImage() {
         StorageReference storageReference = FirebaseStorage.getInstance().getReference();

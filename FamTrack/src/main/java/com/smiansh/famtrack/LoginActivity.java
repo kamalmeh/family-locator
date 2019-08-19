@@ -68,16 +68,14 @@ public class LoginActivity extends AppCompatActivity {
         super.onPostResume();
         login.setOnClickListener(loginClickListener);
         exit.setOnClickListener(exitClickListener);
+        FirebaseAuth mAuth = FirebaseAuth.getInstance();
+        final FirebaseUser user = mAuth.getCurrentUser();
+        if (user == null) {
+            login.setText("Login");
+        }
     }
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_login);
-        login = findViewById(R.id.login);
-        exit = findViewById(R.id.exit);
-        exit.setOnClickListener(exitClickListener);
-
+    void isLoggedIn() {
         FirebaseAuth mAuth = FirebaseAuth.getInstance();
         final FirebaseUser user = mAuth.getCurrentUser();
         if (user != null) {
@@ -107,6 +105,17 @@ public class LoginActivity extends AppCompatActivity {
         } else {
             login.setOnClickListener(loginClickListener);
         }
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_login);
+        login = findViewById(R.id.login);
+        exit = findViewById(R.id.exit);
+        exit.setOnClickListener(exitClickListener);
+
+        isLoggedIn();
     }
 
     @Override
