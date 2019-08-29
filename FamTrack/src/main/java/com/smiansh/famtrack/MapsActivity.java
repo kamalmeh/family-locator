@@ -4,6 +4,7 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -29,6 +30,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -99,6 +101,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             LatLngBounds.Builder builder = new LatLngBounds.Builder();
             for (Marker marker : mMarkers.values()) {
                 builder.include(marker.getPosition());
+                marker.hideInfoWindow();
             }
             mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 100));
             recenter.setVisibility(View.GONE);
@@ -172,6 +175,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 Intent intentAddMember = new Intent(this, AddMemberActivity.class);
                 intentAddMember.putExtra("userId", userId);
                 startActivity(intentAddMember);
+                break;
+            case R.id.addPlaces:
+                Intent intentAddPlace = new Intent(this, GeofenceActivity.class);
+                intentAddPlace.putExtra("userId", userId);
+                startActivity(intentAddPlace);
                 break;
             case R.id.shareLocation:
                 final DocumentReference docRef = db.collection("users").document(userId);
@@ -315,6 +323,33 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             @Override
             public void onCameraMoveStarted(int i) {
                 recenter.setVisibility(View.VISIBLE);
+            }
+        });
+        mMap.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
+            @Override
+            public void onInfoWindowClick(Marker marker) {
+                final LatLng latLng = marker.getPosition();
+                new AlertDialog.Builder(MapsActivity.this)
+                        .setIcon(R.drawable.ic_map_marker_point)
+                        .setTitle("Get Direction")
+                        .setMessage("Do you want to open the turn by turn navigation to " + marker.getTitle() + "?")
+                        .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                Uri gmmIntentUri = Uri.parse("google.navigation:q=" + latLng.latitude + "," + latLng.longitude);
+                                Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
+                                mapIntent.setPackage("com.google.android.apps.maps");
+                                startActivity(mapIntent);
+                            }
+                        })
+                        .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+
+                            }
+                        })
+                        .create()
+                        .show();
             }
         });
         locateFamily();
@@ -540,7 +575,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     InfoWindowData createCustomInfoWindow(String address) {
         InfoWindowData info = new InfoWindowData();
-        info.setAddress(address);
+        info.setAddress(address + "\nClick Me to get Direction");
         CustomInfoWindowGoogleMap customInfoWindow = new CustomInfoWindowGoogleMap(this);
         mMap.setInfoWindowAdapter(customInfoWindow);
         return info;

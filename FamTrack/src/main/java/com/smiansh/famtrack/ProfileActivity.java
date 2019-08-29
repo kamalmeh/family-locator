@@ -37,8 +37,6 @@ import androidx.core.content.ContextCompat;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.snackbar.Snackbar;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -71,7 +69,7 @@ public class ProfileActivity extends AppCompatActivity {
     private ImageView uploadImage;
     private ListView listView;
     private FirebaseFirestore db = FirebaseFirestore.getInstance();
-    private FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+    //    private FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
     private String userId;
     private SharedPreferences sp = null;
 
@@ -405,7 +403,9 @@ public class ProfileActivity extends AppCompatActivity {
                                                 if (data != null) {
                                                     //noinspection unchecked
                                                     Map<String, String> family = (Map<String, String>) data.get("family");
-                                                    family.remove(item);
+                                                    if (family != null) {
+                                                        family.remove(item);
+                                                    }
                                                     data.put("family", family);
                                                     docRef.set(data);
                                                     Toast.makeText(ProfileActivity.this, name + " deleted", Toast.LENGTH_LONG).show();

@@ -1,5 +1,6 @@
 package com.smiansh.famtrack;
 
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,11 +18,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
-public class MembersListAdapter extends BaseAdapter {
-    private final ArrayList mData;
+public class PlacesAdapter extends BaseAdapter {
+    private Context context;
+    private ArrayList mData;
     private Map<String, Object> tempMap = new HashMap<>();
 
-    MembersListAdapter(Map<String, String> map) {
+    PlacesAdapter(Context ctx, Map<String, Object> map) {
+        super();
+        context = ctx;
         mData = new ArrayList();
         for (Map.Entry entry : map.entrySet()) {
             final DocumentReference documentReference = FirebaseFirestore.getInstance().document(entry.getValue().toString());
@@ -32,9 +36,9 @@ public class MembersListAdapter extends BaseAdapter {
                     Task<DocumentSnapshot> task = documentReference.get();
                     try {
                         DocumentSnapshot documentSnapshot = Tasks.await(task);
-                        String firstName = documentSnapshot.getString("firstName");
-                        String lastName = documentSnapshot.getString("lastName");
-                        tempMap.put(firstName + " " + lastName, documentSnapshot.getId());
+//                        GeoPoint geoPoint = documentSnapshot.getGeoPoint("location");
+                        String address = documentSnapshot.getString("address");
+                        tempMap.put(documentSnapshot.getId(), address);
                     } catch (InterruptedException | ExecutionException e) {
                         e.printStackTrace();
                     }
@@ -74,13 +78,14 @@ public class MembersListAdapter extends BaseAdapter {
     public View getView(int i, View view, ViewGroup viewGroup) {
         final View result;
         if (view == null) {
-            result = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.members_list, viewGroup, false);
+            result = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.places_list, viewGroup, false);
         } else {
             result = view;
         }
 
         Map.Entry<String, String> item = getItem(i);
-        ((TextView) result.findViewById(R.id.membername)).setText(item.getKey());
+        ((TextView) result.findViewById(R.id.placename)).setText(item.getKey());
+        ((TextView) result.findViewById(R.id.placeaddress)).setText(item.getValue());
 
         return result;
     }

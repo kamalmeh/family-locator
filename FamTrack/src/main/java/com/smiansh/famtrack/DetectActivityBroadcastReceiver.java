@@ -21,10 +21,10 @@ public class DetectActivityBroadcastReceiver extends BroadcastReceiver {
     private Context mContext;
 
     public void startTrackingService(long requestInterval, String activity) {
-            Intent trackingService = new Intent(mContext, TrackingService.class);
-        mContext.stopService(trackingService);
-            trackingService.putExtra("requestInterval", requestInterval);
-            trackingService.putExtra("activity", activity);
+        Intent trackingService = new Intent(mContext, TrackingService.class);
+//        mContext.stopService(trackingService);
+        trackingService.putExtra("requestInterval", requestInterval);
+        trackingService.putExtra("activity", activity);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             mContext.startForegroundService(trackingService);
         } else {

@@ -10,6 +10,9 @@
         android:id="@+id/shareLocation"
         android:title="Share my Location" />
     <item
+        android:id="@+id/addPlaces"
+        android:title="Add New Place" />
+    <item
         android:id="@+id/signout"
         android:title="SignOut" />
 </menu>

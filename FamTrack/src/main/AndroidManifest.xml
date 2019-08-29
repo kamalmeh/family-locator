@@ -3,49 +3,24 @@
     xmlns:dist="http://schemas.android.com/apk/distribution"
     package="com.smiansh.famtrack">
 
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-
-    <dist:module dist:instant="true" />
-
-    <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION" />
-
     <application
         android:allowBackup="true"
+        android:description="@string/description"
         android:fullBackupContent="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+        <activity android:name=".GeofenceActivity"></activity>
         <activity android:name=".BuySubscriptionActivity" />
-        <activity
-            android:name=".LoginActivity"
-            android:label="@string/title_activity_maps">
+        <activity android:name=".LoginActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <receiver
-            android:name=".DetectActivityBroadcastReceiver"
-            android:enabled="true" />
-
-        <service
-            android:name=".TrackingService"
-            android:enabled="true" />
-
-        <meta-data
-            android:name="com.google.android.gms.car.application"
-            android:resource="@xml/automotive_app_desc" />
-
         <activity android:name=".ShareCodeActivity">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -56,16 +31,21 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.smiansh.famtrack.MapsActivity" />
         </activity>
-
-        <receiver
-            android:name=".AlarmHandler"
-            android:enabled="true"
-            android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
+        <activity
+            android:name=".MapsActivity"
+            android:label="@string/title_activity_maps" />
+        <activity android:name=".ProfileActivity" />
+        <activity android:name=".MainActivity">
             <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MAIN" />
+                <action android:name="android.intent.action.VIEW" />
             </intent-filter>
-        </receiver>
+        </activity>
+        <activity android:name=".ReadTheMessage" />
 
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
         <meta-data
             android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />
@@ -79,16 +59,41 @@
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-3913708046171541~1206325256" />
 
-        <activity
-            android:name=".MapsActivity"
-            android:label="@string/title_activity_maps" />
-        <activity android:name=".ProfileActivity" />
-        <activity android:name=".MainActivity">
+        <receiver
+            android:name=".GeofenceBroadcastReceiver"
+            android:enabled="true" />
+        <receiver
+            android:name=".DetectActivityBroadcastReceiver"
+            android:enabled="true" />
+        <receiver
+            android:name=".AlarmHandler"
+            android:enabled="true"
+            android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
-        </activity>
+        </receiver>
+        <receiver
+            android:name=".UpdateEmergencyMessage"
+            android:exported="false" />
+
+        <service
+            android:name=".TrackingService"
+            android:enabled="true" />
+        <service android:name=".ReadTheMessage" />
     </application>
+
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION" />
+
+    <dist:module dist:instant="true" />
 
 </manifest>

@@ -29,6 +29,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -45,11 +46,14 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
     private static final String TAG = "Login Activity";
     private static final int RC_SIGN_IN = 1001;
     private static final int PERMISSION_REQUEST = 10;
+    private static Marker myMarker;
+    private Helper myHelper;
+
     View.OnClickListener panicClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
             try {
-                Helper myHelper = new Helper(getApplicationContext());
+//                Helper myHelper = new Helper(getApplicationContext());
                 myHelper.sendSMS("Please Help!!!");
             } catch (Exception e) {
                 e.printStackTrace();
@@ -118,6 +122,9 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
         FirebaseAuth mAuth = FirebaseAuth.getInstance();
         final FirebaseUser user = mAuth.getCurrentUser();
         if (user != null) {
+            if (myHelper == null)
+                myHelper = new Helper(this);
+            myHelper.createAlarm(60000);
             mAuth.addAuthStateListener(new FirebaseAuth.AuthStateListener() {
                 @Override
                 public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
@@ -133,9 +140,11 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
                         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
                         if (user != null) {
                             login.setText("Find Family");
-                            startMapActivity(user.getUid());
+                            panic.setVisibility(View.VISIBLE);
+//                            startMapActivity(user.getUid());
                         } else {
                             login.setText("Login");
+                            panic.setVisibility(View.INVISIBLE);
                         }
                         login.setOnClickListener(loginClickListener);
                     }
@@ -159,6 +168,7 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
         } catch (NullPointerException e) {
             e.printStackTrace();
         }
+        myHelper = new Helper(getApplicationContext());
         login = findViewById(R.id.login);
         exit = findViewById(R.id.exit);
         exit.setOnClickListener(exitClickListener);
@@ -177,6 +187,7 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
             if (resultCode == RESULT_OK) {
                 // Successfully signed in
                 login.setText("Find Family");
+                panic.setVisibility(View.VISIBLE);
                 login.setOnClickListener(loginClickListener);
                 FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
                 if (user != null) {
@@ -187,10 +198,10 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
                                 @Override
                                 public void onSuccess(DocumentSnapshot documentSnapshot) {
                                     if (documentSnapshot.get("firstName") != null) {
-                                        startMapActivity(userId);
+//                                        startMapActivity(userId);
                                         stopService(getIntent());
                                     } else {
-                                        startMapActivity(userId);
+//                                        startMapActivity(userId);
                                         startProfileActivity(userId);
                                         stopService(getIntent());
                                     }
@@ -292,13 +303,16 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
             @Override
             public void onLocationResult(LocationResult locationResult) {
                 super.onLocationResult(locationResult);
-                Helper myHelper = new Helper(getApplicationContext());
                 currentLocation = locationResult.getLastLocation();
                 LatLng latLng = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
                 MarkerOptions mOpt = new MarkerOptions().title("You Are Here").position(latLng);
                 mOpt.icon(BitmapDescriptorFactory.fromBitmap(myHelper.createCustomMarker(LoginActivity.this, myHelper.getBitmap())));
-                mMap.addMarker(mOpt).showInfoWindow();
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 13));
+                if (myMarker == null) {
+                    myMarker = mMap.addMarker(mOpt);
+                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 13));
+                } else
+                    myMarker.setPosition(latLng);
+                myMarker.showInfoWindow();
                 mMap.setOnCameraMoveStartedListener(moveStartedListener);
             }
         }, null);

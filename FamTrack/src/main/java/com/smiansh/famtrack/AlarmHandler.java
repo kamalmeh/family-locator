@@ -1,5 +1,6 @@
 package com.smiansh.famtrack;
 
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -42,6 +43,12 @@ public class AlarmHandler extends BroadcastReceiver {
                     myHelper.destroyAlarm();
                     stopAlarmFlag = true;
                     break;
+                case "android.intent.action.DISMISS_NOTIFICATION":
+                    int NOTIFICATION_ID = intent.getIntExtra("NOTIFICATION_ID", 1);
+                    NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+                    if (notificationManager != null) {
+                        notificationManager.cancel(NOTIFICATION_ID);
+                    }
             }
             if (!stopAlarmFlag) {
                 ActivityRecognitionClient activityRecognitionClient = ActivityRecognition.getClient(context);

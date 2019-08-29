@@ -60,6 +60,7 @@ import com.google.firebase.firestore.GeoPoint;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -81,6 +82,7 @@ class Helper {
     private boolean isAdsEnabled = false;
     private NotificationManager notificationManager;
     SmsManager sms = SmsManager.getDefault();
+    static int NOTIFICATION_SERVICE_ID = 1;
 
     Helper(Context ctx) {
         context = ctx;
@@ -217,8 +219,8 @@ class Helper {
     }
 
     Notification getNotification() {
-        String CHANNEL_ID = context.getString(R.string.app_name);
-        String CHANNEL = context.getString(R.string.channel);
+        String CHANNEL_ID = context.getString(R.string.channel);
+        String CHANNEL = context.getString(R.string.channel_id);
         Notification myNotification;
         NotificationChannel channel;
         notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -234,35 +236,40 @@ class Helper {
         }
         Bitmap bmp = getBitmap();
         // Add action button in the notification
-        Intent intent = new Intent(context, LoginActivity.class);
-        intent.putExtra("userId", currUser.getUid());
+        Intent openIntent = new Intent(context, LoginActivity.class);
+        openIntent.putExtra("userId", currUser.getUid());
+//        Intent messageIntent = new Intent(context, MessageActivity.class);
+//        messageIntent.putExtra("userId", currUser.getUid());
         TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
-        stackBuilder.addNextIntentWithParentStack(intent);
+        stackBuilder.addNextIntentWithParentStack(openIntent);
+//        stackBuilder.addNextIntentWithParentStack(messageIntent);
         PendingIntent pIntent = stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
+//        PendingIntent msgIntent = stackBuilder.getPendingIntent(1,PendingIntent.FLAG_UPDATE_CURRENT);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID);
         builder.setSmallIcon(R.drawable.ic_map_marker_point)
                 .setLargeIcon(bmp)
                 .setContentIntent(pIntent)
                 .addAction(R.drawable.ic_paper_plane, "Open", pIntent)
-                .setStyle(new androidx.media.app.NotificationCompat.DecoratedMediaCustomViewStyle())
-                .setContentText(context.getString(R.string.notification_message))
+//                .addAction(R.drawable.ic_message_black_24dp,"Message",msgIntent)
+                .setStyle(new androidx.media.app.NotificationCompat.MediaStyle())
                 .setAutoCancel(true)
                 .setTimeoutAfter(10000)
-                .setOngoing(true)
+//                .setOngoing(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW);
+        builder.setContentText(context.getString(R.string.notification_message));
         myNotification = builder.build();
         return myNotification;
     }
 
-    void sendNote(String notificationTitle, String notificationMessage) {
+    void sendNote() {
         setChannel(context.getString(R.string.channel));
         setChannelId(context.getString(R.string.channel_id));
         if (notificationManager != null) {
-            notificationManager.notify(1, getNotification());
+            notificationManager.notify(NOTIFICATION_SERVICE_ID + 1, this.getNotification());
         }
     }
 
-    public void sendSMS(final String message) {
+    void sendSMS(final String message) {
         String userId = FirebaseAuth.getInstance().getUid();
         final FirebaseFirestore db = FirebaseFirestore.getInstance();
         db.document("users/" + userId).get()
@@ -288,23 +295,19 @@ class Helper {
                             Map<String, String> members = (Map<String, String>) documentSnapshot.get("family");
                             if (members != null) {
                                 for (Map.Entry entry : members.entrySet()) {
-                                    db.document(entry.getValue().toString()).get()
-                                            .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                                    final String userId = entry.getKey().toString();
+                                    final Map<String, Object> emergency_message = new HashMap<>();
+                                    emergency_message.put("emergency_message", message);
+                                    emergency_message.put("sender", firstName);
+                                    emergency_message.put("location", location);
+                                    emergency_message.put("address", add);
+                                    emergency_message.put("read", "no");
+                                    db.document("/emergency/" + userId).update(emergency_message)
+                                            .addOnFailureListener(new OnFailureListener() {
                                                 @Override
-                                                public void onSuccess(DocumentSnapshot documentSnapshot) {
-                                                    String number = documentSnapshot.getString("phone");
-                                                    String msg = message + "Address: " + add + " Latitude: " + location.getLatitude() + " Longitude: " + location.getLongitude();
-                                                    Intent intent = new Intent(context, DetectActivityBroadcastReceiver.class);
-                                                    intent.setAction(DetectActivityBroadcastReceiver.ACTION_PANIC_MSG_SENT);
-                                                    PendingIntent sentIntent = PendingIntent.getBroadcast(context, 0, intent, 0);
-                                                    intent = new Intent(context, DetectActivityBroadcastReceiver.class);
-                                                    intent.setAction(DetectActivityBroadcastReceiver.ACTION_PANIC_MSG_DELIVERED);
-                                                    PendingIntent deliveryIntent = PendingIntent.getBroadcast(context, 1, intent, 0);
-                                                    try {
-                                                        sms.sendTextMessage(number, null, msg + firstName, sentIntent, deliveryIntent);
-                                                    } catch (Exception e) {
-                                                        e.printStackTrace();
-                                                    }
+                                                public void onFailure(@NonNull Exception e) {
+                                                    e.printStackTrace();
+                                                    db.document("/emergency/" + userId).set(emergency_message);
                                                 }
                                             });
                                 }

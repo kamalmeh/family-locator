@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/addPlaceActivity"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <EditText
+        android:id="@+id/address"
+        android:layout_width="match_parent"
+        android:layout_height="150dp"
+        android:layout_gravity="top|left"
+        android:layout_margin="10dp"
+        android:autofillHints="Enter the address"
+        android:inputType="textCapSentences|textMultiLine"
+        android:labelFor="@+id/address"
+        android:lines="5"
+        android:scrollHorizontally="false"
+        android:text="Enter"
+        android:visibility="gone" />
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:orientation="vertical">
+
+        <ImageButton
+            android:id="@+id/mylocationbutton"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_centerInParent="true"
+            android:layout_margin="10dp"
+            android:background="@drawable/ic_my_location_black_24dp"
+            android:contentDescription="My Location Button" />
+
+    </RelativeLayout>
+
+    <Spinner
+        android:id="@+id/myplaces"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:dropDownSelector="@drawable/ic_my_location_black_24dp" />
+
+    <TextView
+        android:id="@+id/label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Modify the Address if you want"
+        android:textAlignment="center"
+        android:textColor="@color/requiredField"
+        android:visibility="gone" />
+
+</LinearLayout>
