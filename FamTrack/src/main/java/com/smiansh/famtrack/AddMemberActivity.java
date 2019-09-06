@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -16,6 +17,7 @@ import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -27,8 +29,9 @@ public class AddMemberActivity extends AppCompatActivity {
     String memberId = "test";
     private EditText authCode;
     private FirebaseFirestore db = FirebaseFirestore.getInstance();
+    private static int allowedMembers = 0;
     DocumentReference authRef;
-    private static int allowedMembers;
+    private String userId = FirebaseAuth.getInstance().getUid();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,12 +53,19 @@ public class AddMemberActivity extends AppCompatActivity {
         assert getSupportActionBar() != null;
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-        db.document("/unlicenced/allowedMembers").get()
+        db.document("/users/" + userId).get()
                 .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
                     @Override
                     public void onSuccess(DocumentSnapshot documentSnapshot) {
                         try {
-                            allowedMembers = Integer.parseInt(documentSnapshot.getString("allowed"));
+                            String temp = documentSnapshot.getString("allowedMembers");
+                            if (temp != null) {
+                                if (temp.length() == 0) {
+                                    allowedMembers = 0;
+                                } else {
+                                    allowedMembers = Integer.parseInt(temp);
+                                }
+                            }
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -89,6 +99,10 @@ public class AddMemberActivity extends AppCompatActivity {
                             @Override
                             public void onSuccess(DocumentSnapshot documentSnapshot) {
                                 memberId = documentSnapshot.getString("userId");
+                                if (memberId == null) {
+                                    TextView error = findViewById(R.id.error);
+                                    error.setText("Invalid Authentication Code");
+                                }
                             }
                         })
                         .addOnFailureListener(new OnFailureListener() {
@@ -117,18 +131,21 @@ public class AddMemberActivity extends AppCompatActivity {
                                     if (family == null) {
                                         family = new HashMap<>();
                                     }
+
                                     if (purchaseLicence == null && family.size() == allowedMembers) {
                                         startActivity(new Intent(getApplicationContext(), BuySubscriptionActivity.class));
                                     } else {
-                                        family.put(memberId, "/users/" + memberId);
-                                        Map<String, Object> familyData = new HashMap<>();
-                                        familyData.put("family." + memberId, "/users/" + memberId);
-                                        docRef.update(familyData);
+                                        if (memberId != null) {
+                                            family.put(memberId, "/users/" + memberId);
+                                            Map<String, Object> familyData = new HashMap<>();
+                                            familyData.put("family." + memberId, "/users/" + memberId);
+                                            docRef.update(familyData);
+                                            finish();
+                                        }
                                     }
                                 }
                             }
                         });
-                finish();
             }
         });
     }

@@ -15,8 +15,14 @@
         android:hint="@string/authcode_hint"
         android:autofillHints="yes"
         android:inputType="text"
-        ads:layout_constraintTop_toTopOf="parent"
+        ads:layout_constraintTop_toBottomOf="@+id/error"
         tools:layout_editor_absoluteX="0dp" />
+
+    <TextView
+        android:id="@+id/error"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        ads:layout_constraintTop_toTopOf="parent" />
 
     <Button
         android:id="@+id/addButton"

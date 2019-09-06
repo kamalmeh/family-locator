@@ -242,6 +242,7 @@ public class TrackingService extends Service {
                         Map<String, String> family = (Map<String, String>) documentSnapshot.get("family");
                         if (family != null) {
                             for (Map.Entry entry : family.entrySet()) {
+                                final String uid = (String) entry.getKey();
                                 db.collection("/users/" + entry.getKey() + "/places").get()
                                         .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
                                             @Override
@@ -259,15 +260,16 @@ public class TrackingService extends Service {
                                                                         GEOFENCE_RADIUS_IN_METERS
                                                                 )
                                                                 .setExpirationDuration(Geofence.NEVER_EXPIRE)
-                                                                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER |
-                                                                        Geofence.GEOFENCE_TRANSITION_EXIT)
+                                                                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_EXIT |
+                                                                        Geofence.GEOFENCE_TRANSITION_DWELL)
+                                                                .setLoiteringDelay(300000)
                                                                 .build()
                                                         );
                                                         geofencingClient.addGeofences(getGeofencingRequest(), getGeofencePendingIntent(name))
                                                                 .addOnSuccessListener(new OnSuccessListener<Void>() {
                                                                     @Override
                                                                     public void onSuccess(Void aVoid) {
-                                                                        Log.i(TAG, "Geofencing added");
+                                                                        Log.i(TAG, "Geofencing added for : " + uid);
                                                                     }
                                                                 })
                                                                 .addOnFailureListener(new OnFailureListener() {

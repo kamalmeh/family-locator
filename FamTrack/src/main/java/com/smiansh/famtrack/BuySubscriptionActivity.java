@@ -16,7 +16,7 @@ import com.android.billingclient.api.SkuDetails;
 import java.util.List;
 
 public class BuySubscriptionActivity extends AppCompatActivity {
-    private final String TAG = "BUY_SUBSCRIPTION_ACTIVITY";
+    private final String TAG = "BUY_SUBSCRIPTION";
     Helper.Subscription subscription;
 
     @Override
