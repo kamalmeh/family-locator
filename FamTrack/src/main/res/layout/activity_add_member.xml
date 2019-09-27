@@ -22,6 +22,8 @@
         android:id="@+id/error"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:textAlignment="center"
+        ads:layout_constraintBottom_toTopOf="@id/addButton"
         ads:layout_constraintTop_toTopOf="parent" />
 
     <Button
@@ -33,6 +35,28 @@
         android:hint="@string/authcode_button_hint"
         android:text="@string/authcode_button_text"
         ads:layout_constraintTop_toBottomOf="@+id/authCode" />
+
+    <Button
+        android:id="@+id/renewButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/button_style"
+        android:hint="@string/renew_button_hint"
+        android:text="@string/renew_button_text"
+        android:visibility="gone"
+        ads:layout_constraintTop_toBottomOf="@+id/addButton" />
+
+    <Button
+        android:id="@+id/upgradeButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/button_style"
+        android:hint="@string/upgrade_button_hint"
+        android:text="@string/upgrade_button_text"
+        android:visibility="gone"
+        ads:layout_constraintTop_toBottomOf="@+id/renewButton" />
 
     <com.google.android.gms.ads.AdView
         android:id="@+id/adView"

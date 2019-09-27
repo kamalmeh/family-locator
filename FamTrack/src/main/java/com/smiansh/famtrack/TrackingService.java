@@ -44,6 +44,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.SetOptions;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -142,7 +143,7 @@ public class TrackingService extends Service {
             Map<String, Object> data = new HashMap<>();
             data.put("location", geoPoint);
             data.put("location_timestamp", sd.format(new Date()));
-            documentReference.update(data);
+            documentReference.set(data, SetOptions.merge());
         }
     }
 
@@ -226,8 +227,10 @@ public class TrackingService extends Service {
         } catch (NullPointerException e) {
             e.printStackTrace();
         }
-        defineGeofences();
-        subscribeToEmergencyMessages();
+        if (FirebaseAuth.getInstance().getCurrentUser() != null) {
+            defineGeofences();
+            subscribeToEmergencyMessages();
+        }
     }
 
     private void defineGeofences() {
@@ -260,8 +263,8 @@ public class TrackingService extends Service {
                                                                         GEOFENCE_RADIUS_IN_METERS
                                                                 )
                                                                 .setExpirationDuration(Geofence.NEVER_EXPIRE)
-                                                                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_EXIT |
-                                                                        Geofence.GEOFENCE_TRANSITION_DWELL)
+                                                                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER |
+                                                                        Geofence.GEOFENCE_TRANSITION_EXIT)
                                                                 .setLoiteringDelay(300000)
                                                                 .build()
                                                         );
@@ -276,7 +279,7 @@ public class TrackingService extends Service {
                                                                     @Override
                                                                     public void onFailure(@NonNull Exception e) {
                                                                         e.printStackTrace();
-                                                                        Log.i(TAG, "Error in adding geofencing");
+                                                                        Log.i(TAG, e.getMessage() + " ");
                                                                     }
                                                                 });
                                                     }

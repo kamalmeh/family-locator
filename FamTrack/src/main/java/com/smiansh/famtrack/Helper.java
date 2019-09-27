@@ -22,29 +22,15 @@ import android.os.Build;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
-import android.telephony.SmsManager;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
-import com.android.billingclient.api.AcknowledgePurchaseParams;
-import com.android.billingclient.api.AcknowledgePurchaseResponseListener;
-import com.android.billingclient.api.BillingClient;
-import com.android.billingclient.api.BillingClientStateListener;
-import com.android.billingclient.api.BillingResult;
-import com.android.billingclient.api.Purchase;
-import com.android.billingclient.api.PurchasesUpdatedListener;
-import com.android.billingclient.api.SkuDetails;
-import com.android.billingclient.api.SkuDetailsParams;
-import com.android.billingclient.api.SkuDetailsResponseListener;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -59,7 +45,6 @@ import com.google.firebase.firestore.GeoPoint;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -75,27 +60,20 @@ class Helper {
     private static AlarmManager am;
     private static PendingIntent alarmIntent;
     private Context context;
+    private FirebaseFirestore db = FirebaseFirestore.getInstance();
+    private FirebaseAuth mAuth = FirebaseAuth.getInstance();
     private DocumentReference userData;
     private CollectionReference userColl;
     private CollectionReference authColl;
     private FirebaseUser currUser;
     private boolean isAdsEnabled = false;
     private NotificationManager notificationManager;
-    SmsManager sms = SmsManager.getDefault();
     static int NOTIFICATION_SERVICE_ID = 1;
 
     Helper(Context ctx) {
         context = ctx;
-        FirebaseAuth mAuth = FirebaseAuth.getInstance();
-        currUser = mAuth.getCurrentUser();
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
         userColl = db.collection("users");
         authColl = db.collection("authcodes");
-        try {
-            userData = db.collection("users").document(currUser.getUid());
-        } catch (NullPointerException e) {
-            e.printStackTrace();
-        }
 
         try {
             SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
@@ -111,10 +89,6 @@ class Helper {
 
     private static void setChannelId(String channelId) {
         CHANNEL_ID = channelId;
-    }
-
-    Subscription getSubscription() {
-        return new Subscription();
     }
 
     Context getContext() {
@@ -237,7 +211,9 @@ class Helper {
         Bitmap bmp = getBitmap();
         // Add action button in the notification
         Intent openIntent = new Intent(context, LoginActivity.class);
-        openIntent.putExtra("userId", currUser.getUid());
+        if (currUser != null) {
+            openIntent.putExtra("userId", currUser.getUid());
+        }
 //        Intent messageIntent = new Intent(context, MessageActivity.class);
 //        messageIntent.putExtra("userId", currUser.getUid());
         TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
@@ -270,7 +246,7 @@ class Helper {
     }
 
     void sendSMS(final String message) {
-        String userId = FirebaseAuth.getInstance().getUid();
+        String userId = currUser.getUid();
         final FirebaseFirestore db = FirebaseFirestore.getInstance();
         db.document("users/" + userId).get()
                 .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
@@ -327,6 +303,10 @@ class Helper {
         return userColl;
     }
 
+    void setCurrUser(FirebaseUser user) {
+        currUser = user;
+    }
+
     FirebaseUser getCurrUser() {
         return currUser;
     }
@@ -336,6 +316,11 @@ class Helper {
     }
 
     DocumentReference getUserData() {
+        try {
+            userData = db.collection("users").document(currUser.getUid());
+        } catch (NullPointerException e) {
+            e.printStackTrace();
+        }
         return userData;
     }
 
@@ -345,157 +330,5 @@ class Helper {
 
     private void setAdsEnabled(boolean adsEnabled) {
         isAdsEnabled = adsEnabled;
-    }
-
-    public class Subscription implements PurchasesUpdatedListener {
-        private final String TAG = "SUBSCRIPTION";
-        //        private final String PREMIUM = "android.test.purchased";
-        private final String PREMIUM = "premium";
-        private BillingClient.Builder builder;
-        private BillingClient client;
-        private List<SkuDetails> skuDetails;
-
-        Subscription() {
-            super();
-            billingClient();
-        }
-
-        BillingClient getClient() {
-            return client;
-        }
-
-        @Override
-        public void onPurchasesUpdated(BillingResult billingResult, @Nullable List<Purchase> purchases) {
-            if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK
-                    && purchases != null) {
-                for (Purchase purchase : purchases) {
-                    handlePurchase(purchase);
-                }
-            } else if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.USER_CANCELED) {
-                // Handle an error caused by a user cancelling the purchase flow.
-                Toast.makeText(context, "User cancelled the payment", Toast.LENGTH_SHORT).show();
-            } else {
-                // Handle any other error codes.
-                Toast.makeText(context, billingResult.getDebugMessage() + "\nUnknown error: " + billingResult.getResponseCode(), Toast.LENGTH_SHORT).show();
-            }
-        }
-
-        void handlePurchase(final Purchase purchase) {
-            if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-                // Acknowledge purchase and grant the item to the user
-                final FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-                final FirebaseFirestore db = FirebaseFirestore.getInstance();
-                if (user != null) {
-                    db.document("users/" + user.getUid()).get()
-                            .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
-                                @Override
-                                public void onSuccess(DocumentSnapshot documentSnapshot) {
-                                    if (documentSnapshot != null) {
-                                        Map<String, Object> userData = documentSnapshot.getData();
-                                        if (userData != null) {
-                                            userData.put("purchaseLicence", purchase.getPurchaseToken());
-                                            db.document("users/" + user.getUid()).update(userData);
-                                            if (!purchase.isAcknowledged()) {
-                                                AcknowledgePurchaseParams acknowledgePurchaseParams =
-                                                        AcknowledgePurchaseParams.newBuilder()
-                                                                .setPurchaseToken(purchase.getPurchaseToken())
-                                                                .build();
-                                                client.acknowledgePurchase(acknowledgePurchaseParams, new AcknowledgePurchaseResponseListener() {
-                                                    @Override
-                                                    public void onAcknowledgePurchaseResponse(BillingResult billingResult) {
-                                                        if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-                                                            Log.i(TAG, "Purchase Successful");
-                                                        }
-                                                    }
-                                                });
-                                            }
-                                        }
-                                    }
-                                }
-                            })
-                            .addOnFailureListener(new OnFailureListener() {
-                                @Override
-                                public void onFailure(@NonNull Exception e) {
-                                    e.printStackTrace();
-                                }
-                            });
-                }
-            } else if (purchase.getPurchaseState() == Purchase.PurchaseState.PENDING) {
-                // Here you can confirm to the user that they've started the pending
-                // purchase, and to complete it, they should follow instructions that
-                // are given to them. You can also choose to remind the user in the
-                // future to complete the purchase if you detect that it is still
-                // pending.
-            }
-        }
-
-        void createBuilder() {
-            builder = BillingClient.newBuilder(context).setListener(this);
-        }
-
-        void billingClient() {
-            createBuilder();
-            client = builder
-                    .enablePendingPurchases()
-                    .setListener(this)
-                    .build();
-            client.startConnection(new BillingClientStateListener() {
-                @Override
-                public void onBillingSetupFinished(final BillingResult billingResult) {
-                    if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-//                        Toast.makeText(context, "Billing Setup Finished", Toast.LENGTH_SHORT).show();
-                        List<String> skuList = new ArrayList<>();
-                        skuList.add(PREMIUM);
-                        SkuDetailsParams.Builder params = SkuDetailsParams.newBuilder();
-                        params.setSkusList(skuList).setType(BillingClient.SkuType.SUBS);
-                        client.querySkuDetailsAsync(params.build(),
-                                new SkuDetailsResponseListener() {
-                                    @Override
-                                    public void onSkuDetailsResponse(BillingResult billingResult,
-                                                                     List<SkuDetails> skuDetailsList) {
-                                        if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && skuDetailsList != null) {
-                                            skuDetails = skuDetailsList;
-                                        }
-                                    }
-                                });
-                    }
-//                    try {
-//                        Thread.sleep(1000);
-//                    } catch (InterruptedException e) {
-//                        e.printStackTrace();
-//                    }
-                }
-
-                @Override
-                public void onBillingServiceDisconnected() {
-                    Toast.makeText(context, "Billing Service Disconnected", Toast.LENGTH_SHORT).show();
-//                    TODO: Add Retry billing connection setup
-                }
-            });
-        }
-
-        List<SkuDetails> getSkuDetails() {
-            //getBillingClient();
-//            List<String> skuList = new ArrayList<>();
-//            skuList.add(PREMIUM);
-//            SkuDetailsParams.Builder params = SkuDetailsParams.newBuilder();
-//            params.setSkusList(skuList).setType(BillingClient.SkuType.SUBS);
-//            billingClient.querySkuDetailsAsync(params.build(),
-//                    new SkuDetailsResponseListener() {
-//                        @Override
-//                        public void onSkuDetailsResponse(BillingResult billingResult,
-//                                                         List<SkuDetails> skuDetailsList) {
-//                            if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && skuDetailsList != null) {
-//                                skuDetails = skuDetailsList;
-//                            }
-//                        }
-//                    });
-//            try {
-//                Thread.sleep(1000);
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
-            return skuDetails;
-        }
     }
 }

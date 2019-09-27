@@ -15,7 +15,9 @@ import android.location.Address;
 import android.location.Geocoder;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -53,6 +55,7 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.EventListener;
@@ -81,34 +84,77 @@ import javax.net.ssl.HttpsURLConnection;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
-public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback {
+public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback, SharedPreferences.OnSharedPreferenceChangeListener {
     private static final String TAG = "MAPS_ACTIVITY";
     private static final int PERMISSION_REQUEST = 10;
     private GoogleMap mMap;
     private static final String ALPHA_NUMERIC_STRING = "0123456789" +
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ" + "abcdefghijklmnopqrstuvwxyz";
+            "ABCDEFGHJKLMNOPQRSTUVWXYZ" + "abcdefghijkmnopqrstuvwxyz";
+    public static String self;
+    public static Marker selfMarker;
+    private static boolean boundLatLong = false;
     private String userId;
-    private FirebaseFirestore db;
+    private static boolean hideMyLocation = false;
+    public HashMap<String, Marker> mMarkers = new HashMap<>();
     private MarkerOptions mOpt = null;
-    private HashMap<String, Marker> mMarkers = new HashMap<>();
+    SharedPreferences sharedPreferences;
     private Bitmap bmp = null;
     private Helper myHelper;
-    private static boolean boundLatLong = true;
+    private FirebaseFirestore db = FirebaseFirestore.getInstance();
+    private FirebaseAuth mAuth = FirebaseAuth.getInstance();
+    private FirebaseUser user = mAuth.getCurrentUser();
+    private BillingManager subscription;
+    private HashMap<String, String> userStatuss = new HashMap<>();
+    private boolean licencedProduct = false;
+    private Button recenter, hide;
     View.OnClickListener recenterClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
             boundLatLong = true;
-            LatLngBounds.Builder builder = new LatLngBounds.Builder();
-            for (Marker marker : mMarkers.values()) {
-                builder.include(marker.getPosition());
-                marker.hideInfoWindow();
+            if (mMarkers.size() == 0) {
+                mMarkers.put(self, selfMarker);
             }
-            mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 100));
-            recenter.setVisibility(View.GONE);
+            setLatLongBound();
         }
     };
-    private Button recenter;
-    private SharedPreferences sp;
+    View.OnClickListener hideClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            if (hide.getText().equals("Hide Me")) {
+                hide.setText("Show Me");
+                selfMarker = mMarkers.remove(self);
+                hideMyLocation = true;
+            } else {
+                hide.setText("Hide Me");
+                mMarkers.put(self, selfMarker);
+                hideMyLocation = false;
+            }
+            setLatLongBound();
+        }
+    };
+
+    public void setLatLongBound() {
+        if (mMarkers == null)
+            return;
+        if (mMarkers.size() > 0) {
+            LatLngBounds.Builder builder = new LatLngBounds.Builder();
+            for (Map.Entry entry : mMarkers.entrySet()) {
+                Marker marker = (Marker) entry.getValue();
+                if (marker != null) {
+                    builder.include(marker.getPosition());
+                    InfoWindowData info = createCustomInfoWindow(getGeoAddress(new GeoPoint(marker.getPosition().latitude, marker.getPosition().longitude), userStatuss.get(entry.getKey().toString())));
+                    marker.setTag(info);
+                    marker.setVisible(true);
+                    marker.hideInfoWindow();
+                }
+            }
+            if (mMarkers.size() > 1)
+                hide.setVisibility(View.VISIBLE);
+            mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 100));
+        }
+        recenter.setVisibility(View.GONE);
+        boundLatLong = false;
+    }
 
     public static Bitmap createCustomMarker(Context context, Bitmap bmp) {
 
@@ -139,32 +185,87 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     protected void initialize() {
         try {
-            userId = Objects.requireNonNull(FirebaseAuth.getInstance().getCurrentUser()).getUid();
-            db = FirebaseFirestore.getInstance();
+            userId = user.getUid();
         } catch (NullPointerException e) {
             e.printStackTrace();
         }
     }
 
     @Override
+    protected void onPostResume() {
+        super.onPostResume();
+        initialize();
+        if (licencedProduct) {
+            locateFamily();
+            subscribeToLocations();
+            if (mMarkers.size() > 1)
+                hide.setVisibility(View.VISIBLE);
+        } else {
+            selfSubscribe();
+            hide.setVisibility(View.GONE);
+        }
+        recenter.setOnClickListener(recenterClickListener);
+        hide.setOnClickListener(hideClickListener);
+        sharedPreferences.registerOnSharedPreferenceChangeListener(this);
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
-        initialize();
-        locateFamily();
-        subscribeToLocations();
-        recenter.setOnClickListener(recenterClickListener);
+        subscription.refreshPurchases();
+        licencedProduct = subscription.getMyPurchases().size() > 0;
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        finish();
     }
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         switch (item.getItemId()) {
+            case R.id.renew:
+                subscription.launchBillingWorkflow();
+                finish();
+                break;
             case R.id.signout:
-                FirebaseAuth.getInstance().signOut();
-                LoginManager.getInstance().logOut();
-                AuthUI.getInstance().signOut(getApplicationContext());
+                Log.i(TAG, "Signing out...");
+                db.collection("users").document(userId).get()
+                        .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                            @Override
+                            public void onSuccess(DocumentSnapshot documentSnapshot) {
+                                Map<String, Object> data = documentSnapshot.getData();
+                                if (data != null) {
+                                    data.put("status", "Signed Out");
+                                    db.collection("users").document(userId).set(data, SetOptions.merge())
+                                            .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                                @Override
+                                                public void onSuccess(Void aVoid) {
+                                                    FirebaseAuth.getInstance().signOut();
+                                                    LoginManager.getInstance().logOut();
+                                                    AuthUI.getInstance().signOut(getApplicationContext());
+                                                    Log.i(TAG, "Signed out...");
+                                                    finish();
+                                                }
+                                            })
+                                            .addOnFailureListener(new OnFailureListener() {
+                                                @Override
+                                                public void onFailure(@NonNull Exception e) {
+                                                    Toast.makeText(MapsActivity.this, "Could not sign out the user", Toast.LENGTH_SHORT).show();
+                                                }
+                                            });
+                                }
+                            }
+                        })
+                        .addOnFailureListener(new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                e.printStackTrace();
+                            }
+                        });
                 myHelper.destroyAlarm();
                 myHelper.stopTrackingService(this);
-                finish();
                 break;
             case R.id.updateProfile:
                 Intent intentProfile = new Intent(this, ProfileActivity.class);
@@ -190,6 +291,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 String oldAuthCode = null;
                                 SimpleDateFormat format = new SimpleDateFormat("ddMMyyyyHHmmss", Locale.getDefault());
                                 Map<String, Object> data = documentSnapshot.getData();
+                                if (data == null)
+                                    data = new HashMap<>();
                                 String authCode = documentSnapshot.getString("authCode");
                                 String timestamp = documentSnapshot.getString("authCodeTimestamp");
                                 if (timestamp == null || authCode == null) {
@@ -212,7 +315,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                                 if (diff > limit) {
                                     authCode = randomAlphaNumeric(6);
-                                    assert data != null;
                                     data.put("authCode", authCode);
                                     data.put("authCodeTimestamp", format.format(new Date()));
                                     docRef.update(data);
@@ -260,13 +362,21 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        myHelper = new Helper(getApplicationContext());
+        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        sharedPreferences.registerOnSharedPreferenceChangeListener(this);
+        subscription = new BillingManager(this).build();
+        licencedProduct = subscription.getMyPurchases().size() > 0;
+        myHelper = new Helper(this);
+        myHelper.setCurrUser(user);
         myHelper.createAlarm(60000);
         setContentView(R.layout.activity_maps);
         recenter = findViewById(R.id.recenter);
         recenter.setOnClickListener(recenterClickListener);
         recenter.setVisibility(View.GONE);
-        if (myHelper.isAdsEnabled()) {
+        hide = findViewById(R.id.hide);
+        hide.setOnClickListener(hideClickListener);
+
+        if (!licencedProduct) {
             try {
                 MobileAds.initialize(this, getString(R.string.ads));
                 AdView mAdView = findViewById(R.id.adView);
@@ -298,10 +408,19 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         mMap = googleMap;
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
+                != PackageManager.PERMISSION_GRANTED && (ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED)
+                && (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)) {
+            String[] permissions;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                permissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACTIVITY_RECOGNITION};
+
+            } else {
+                permissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION};
+            }
             ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.SEND_SMS},
+                    permissions,
                     PERMISSION_REQUEST);
         }
 
@@ -313,12 +432,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 return false;
             }
         });
-        mMap.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
-            @Override
-            public void onCameraIdle() {
-                boundLatLong = true;
-            }
-        });
+
         mMap.setOnCameraMoveStartedListener(new GoogleMap.OnCameraMoveStartedListener() {
             @Override
             public void onCameraMoveStarted(int i) {
@@ -352,8 +466,49 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         .show();
             }
         });
-        locateFamily();
-        subscribeToLocations();
+
+        if (licencedProduct) {
+            locateFamily();
+            subscribeToLocations();
+        } else {
+            selfSubscribe();
+        }
+    }
+
+    private void selfSubscribe() {
+        db.collection("users").document(userId).get()
+                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                    @Override
+                    public void onSuccess(DocumentSnapshot documentSnapshot) {
+                        if (documentSnapshot != null) {
+                            self = documentSnapshot.getString("firstName");
+                            setMarker(documentSnapshot);
+                            setLatLongBound();
+                        }
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        e.printStackTrace();
+                    }
+                });
+        db.collection("users").document(userId)
+                .addSnapshotListener(new EventListener<DocumentSnapshot>() {
+                    @Override
+                    public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
+                        if (documentSnapshot != null) {
+                            self = documentSnapshot.getString("firstName");
+                            String status = documentSnapshot.getString("status");
+                            if (status != null)
+                                userStatuss.put(self, status);
+                            else userStatuss.put(self, "Unknown");
+                            if (!hideMyLocation)
+                                setMarker(documentSnapshot);
+                            setLatLongBound();
+                        }
+                    }
+                });
     }
 
     @Override
@@ -365,8 +520,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             } else {
                 if ((grantResults[0] == PackageManager.PERMISSION_GRANTED) && (grantResults[1] == PackageManager.PERMISSION_GRANTED)) {
                     // Permission was granted.
-                    Log.i(TAG, "Permission was granted");
-//                    requestLocationUpdates(null);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        if (grantResults[2] != PackageManager.PERMISSION_GRANTED) {
+                            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACTIVITY_RECOGNITION}, PERMISSION_REQUEST);
+                        }
+                    } else {
+                        Log.i(TAG, "Permission was granted");
+                    }
                 } else {
                     Snackbar.make(
                             findViewById(R.id.map),
@@ -399,7 +559,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 @Override
                 public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
                     if (documentSnapshot != null) {
-                        setMarker(documentSnapshot);
+                        self = documentSnapshot.getString("firstName");
+                        String status = documentSnapshot.getString("status");
+                        if (status != null)
+                            userStatuss.put(self, status);
+                        else userStatuss.put(self, "Unknown");
+                        if (!hideMyLocation)
+                            setMarker(documentSnapshot);
                     }
                 }
             });
@@ -448,49 +614,56 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
+    String getGeoAddress(GeoPoint location, String userStatus) {
+        String address = "Address: Not Available";
+        List<Address> addressList;
+        if (location != null) {
+            Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+            try {
+                addressList = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+                if (addressList.size() > 0) {
+                    address = addressList.get(0).getAddressLine(0);
+                    if (userStatus != null)
+                        address = address.concat("\n\nLogged In Status: " + userStatus);
+                    else address = address.concat("\n\nLogged In Status: Unknown");
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return address;
+    }
+
     private void setMarker(DocumentSnapshot dataSnapshot) {
         String title = dataSnapshot.getString("firstName");
-        String address = "Address";
-        List<Address> addressList;
         GeoPoint geoPoint = dataSnapshot.getGeoPoint("location");
         String uid = dataSnapshot.getId();
+        String status = dataSnapshot.getString("status");
+        userStatuss.put(title, status);
         LatLng location = null;
         if (geoPoint != null) {
             location = new LatLng(geoPoint.getLatitude(), geoPoint.getLongitude());
         }
         if (location != null) {
-            Geocoder geocoder = new Geocoder(this, Locale.getDefault());
-            try {
-                addressList = geocoder.getFromLocation(location.latitude, location.longitude, 1);
-                if (addressList.size() > 0) {
-                    address = addressList.get(0).getAddressLine(0);
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
             if (!mMarkers.containsKey(title)) {
-                InfoWindowData info = createCustomInfoWindow(address);
                 mOpt = new MarkerOptions().title(title).position(location);
                 downloadProfileImage(uid, title);
                 mOpt.icon(BitmapDescriptorFactory.fromBitmap(createCustomMarker(MapsActivity.this, bmp)));
                 Marker newMarker = mMap.addMarker(mOpt);
+                InfoWindowData info = createCustomInfoWindow(getGeoAddress(new GeoPoint(newMarker.getPosition().latitude, newMarker.getPosition().longitude), status));
                 newMarker.setTag(info);
                 mMarkers.put(title, newMarker);
+                if (self.equals(title)) {
+                    selfMarker = newMarker;
+                }
             } else {
                 Objects.requireNonNull(mMarkers.get(title)).setPosition(location);
+                Objects.requireNonNull(mMarkers.get(title)).setVisible(true);
                 //downloadProfileImage(uid, title);
             }
-            if (boundLatLong) {
-                LatLngBounds.Builder builder = new LatLngBounds.Builder();
-                for (Marker marker : mMarkers.values()) {
-                    builder.include(marker.getPosition());
-                }
-                mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 100));
-                recenter.setVisibility(View.GONE);
-            } else {
-                Objects.requireNonNull(mMarkers.get(title)).setPosition(location);
-                recenter.setVisibility(View.VISIBLE);
-            }
+
+            setLatLongBound();
         }
     }
 
@@ -527,6 +700,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         @Override
                         public void onSuccess(DocumentSnapshot documentSnapshot) {
                             try {
+                                self = documentSnapshot.getString("firstName");
                                 //noinspection unchecked
                                 Map<String, Object> family = (Map<String, Object>) documentSnapshot.get("family");
                                 if (family != null) {
@@ -547,6 +721,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                                 });
                                     }
                                 }
+                                setMarker(documentSnapshot);
+                                if (mMarkers.size() > 1)
+                                    hide.setVisibility(View.VISIBLE);
+                                else hide.setVisibility(View.GONE);
+                                boundLatLong = true;
+                                setLatLongBound();
                             } catch (SecurityException e) {
                                 e.printStackTrace();
                             }
@@ -561,6 +741,81 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         } catch (NullPointerException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences sp, String key) {
+//        if (key.contains("isSkuDetailsRetrieved")){
+//        boolean isSkuDetailsRetrieved = sp.getBoolean("isSkuDetailsRetrieved", false);
+//        if (isSkuDetailsRetrieved) {
+//            sharedPreferences.edit().putBoolean("isSkuDetailsRetrieved", false).apply();
+//            final List<Purchase> myPurchases = subscription.getMyPurchases();
+//            if (myPurchases != null) {
+//                if (myPurchases.size() <= 0) {
+//                    hide.setVisibility(View.GONE);
+//                    if (mMap != null) {
+//                        if (mMarkers != null) {
+//                            mMap.clear();
+//                            mMarkers.clear();
+//                            DocumentReference docRef = db.collection("users").document(userId);
+//                            docRef.get()
+//                                    .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+//                                        @Override
+//                                        public void onSuccess(DocumentSnapshot documentSnapshot) {
+//                                            if (documentSnapshot != null) {
+//                                                self = documentSnapshot.getString("firstName");
+//                                                String status = documentSnapshot.getString("status");
+//                                                GeoPoint geoPoint = documentSnapshot.getGeoPoint("location");
+//                                                if (status != null)
+//                                                    userStatuss.put(self, status);
+//                                                else userStatuss.put(self, "Unknown");
+//                                                if (!hideMyLocation)
+//                                                    setMarker(documentSnapshot);
+//                                                if (geoPoint != null)
+//                                                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(geoPoint.getLatitude(), geoPoint.getLongitude()), 15));
+//                                                else {
+//                                                    AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivity.this);
+//                                                    builder.setMessage(getString(R.string.location_availibility))
+//                                                            .setTitle("Location Availability Check")
+//                                                            .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+//                                                                @Override
+//                                                                public void onClick(DialogInterface dialog, int which) {
+//                                                                    Log.i(TAG, "Starting forground process");
+//                                                                    Intent trackingService = new Intent(MapsActivity.this, TrackingService.class);
+//                                                                    trackingService.putExtra("requestInterval", 60000);
+//                                                                    trackingService.putExtra("activity", "Stationary");
+//                                                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//                                                                        startForegroundService(trackingService);
+//                                                                    } else {
+//                                                                        startService(trackingService);
+//                                                                    }
+//                                                                    dialog.dismiss();
+//                                                                }
+//                                                            })
+//                                                            .create()
+//                                                            .show();
+////                                        Toast.makeText(MapsActivity.this, "No Location Available for your device as of now. Please wait for the location update.", Toast.LENGTH_LONG).show();
+//                                                }
+//                                            }
+//                                        }
+//                                    })
+//                                    .addOnFailureListener(new OnFailureListener() {
+//                                        @Override
+//                                        public void onFailure(@NonNull Exception e) {
+//                                            e.printStackTrace();
+//                                        }
+//                                    });
+//                        }
+//                    }
+//                } else {
+//                    locateFamily();
+//                    subscribeToLocations();
+//                    hide.setVisibility(View.VISIBLE);
+//                    setLatLongBound();
+//                }
+//            }
+//        }
+//        }
     }
 
     class MarkerParams {

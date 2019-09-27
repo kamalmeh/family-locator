@@ -5,18 +5,25 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.facebook.login.LoginManager;
 import com.firebase.ui.auth.AuthUI;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -38,9 +45,11 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 public class LoginActivity extends AppCompatActivity implements OnMapReadyCallback {
     private static final String TAG = "Login Activity";
@@ -48,6 +57,46 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
     private static final int PERMISSION_REQUEST = 10;
     private static Marker myMarker;
     private Helper myHelper;
+    LinearLayout linearLayout;
+    ConstraintLayout activity_main;
+    SupportMapFragment mapFragment;
+    private boolean linearLayoutShow = true;
+    private BillingManager subscription;
+    private FirebaseFirestore db = FirebaseFirestore.getInstance();
+    private FirebaseAuth mAuth = FirebaseAuth.getInstance();
+    private FirebaseUser user = mAuth.getCurrentUser();
+    final View.OnClickListener loginClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            if (login.getText().equals("Login")) {
+                try {
+
+                    List<AuthUI.IdpConfig> providers = Arrays.asList(
+                            new AuthUI.IdpConfig.EmailBuilder().build(),
+                            new AuthUI.IdpConfig.PhoneBuilder().build(),
+                            new AuthUI.IdpConfig.GoogleBuilder().build(),
+                            new AuthUI.IdpConfig.FacebookBuilder().build());
+
+                    // Create and launch sign-in intent
+                    startActivityForResult(
+                            AuthUI.getInstance()
+                                    .createSignInIntentBuilder()
+                                    .setAvailableProviders(providers)
+                                    .setIsSmartLockEnabled(true)
+                                    .build(),
+                            RC_SIGN_IN);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            } else {
+                if (user != null) {
+                    if (login.getText().equals("Find Family")) {
+                        startMapActivity(user.getUid());
+                    } else checkIfAlreadyLoggedIn();
+                }
+            }
+        }
+    };
 
     View.OnClickListener panicClickListener = new View.OnClickListener() {
         @Override
@@ -68,29 +117,38 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
         }
     };
     private Location currentLocation;
-    View.OnClickListener loginClickListener = new View.OnClickListener() {
+    private FirebaseAuth.AuthStateListener authStateListener = new FirebaseAuth.AuthStateListener() {
         @Override
-        public void onClick(View view) {
-            if (login.getText().equals("Login")) {
-                List<AuthUI.IdpConfig> providers = Arrays.asList(
-                        new AuthUI.IdpConfig.EmailBuilder().build(),
-                        new AuthUI.IdpConfig.PhoneBuilder().build(),
-                        new AuthUI.IdpConfig.GoogleBuilder().build(),
-                        new AuthUI.IdpConfig.FacebookBuilder().build());
+        public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
+            int fine_location = ContextCompat.checkSelfPermission(LoginActivity.this, Manifest.permission.ACCESS_FINE_LOCATION);
+            if (fine_location != PackageManager.PERMISSION_GRANTED) {
+                String[] permissions;
 
-                // Create and launch sign-in intent
-                startActivityForResult(
-                        AuthUI.getInstance()
-                                .createSignInIntentBuilder()
-                                .setAvailableProviders(providers)
-                                .setIsSmartLockEnabled(true)
-                                .build(),
-                        RC_SIGN_IN);
-            } else {
-                FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-                if (user != null) {
-                    startMapActivity(user.getUid());
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    permissions = new String[]{
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                            Manifest.permission.ACTIVITY_RECOGNITION
+                    };
+                } else {
+                    permissions = new String[]{
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                    };
                 }
+                ActivityCompat.requestPermissions(LoginActivity.this, permissions,
+                        PERMISSION_REQUEST);
+            } else {
+//                if (firebaseAuth.getCurrentUser() != null) {
+//                    user=firebaseAuth.getCurrentUser();
+//                    login.setText("Find Family");
+//                    panic.setVisibility(View.VISIBLE);
+//                } else {
+//                    login.setText("Login");
+//                    panic.setVisibility(View.INVISIBLE);
+//                    user = null;
+//                }
+                login.setOnClickListener(loginClickListener);
             }
         }
     };
@@ -103,55 +161,58 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
     };
     private Button login, exit, panic;
 
-    @Override
-    protected void onPostResume() {
-        super.onPostResume();
-        login.setOnClickListener(loginClickListener);
-        exit.setOnClickListener(exitClickListener);
-        panic.setOnClickListener(panicClickListener);
-        if (mMap != null)
-            mMap.setOnCameraMoveStartedListener(moveStartedListener);
-        FirebaseAuth mAuth = FirebaseAuth.getInstance();
-        final FirebaseUser user = mAuth.getCurrentUser();
-        if (user == null) {
-            login.setText("Login");
-        }
-    }
-
     void isLoggedIn() {
-        FirebaseAuth mAuth = FirebaseAuth.getInstance();
-        final FirebaseUser user = mAuth.getCurrentUser();
         if (user != null) {
             if (myHelper == null)
                 myHelper = new Helper(this);
+            myHelper.setCurrUser(user);
             myHelper.createAlarm(60000);
-            mAuth.addAuthStateListener(new FirebaseAuth.AuthStateListener() {
-                @Override
-                public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
-                    int fine_location = ContextCompat.checkSelfPermission(LoginActivity.this, Manifest.permission.ACCESS_FINE_LOCATION);
-                    if (fine_location != PackageManager.PERMISSION_GRANTED) {
-                        String[] permissions = new String[]{
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION
-                        };
-                        ActivityCompat.requestPermissions(LoginActivity.this, permissions,
-                                PERMISSION_REQUEST);
-                    } else {
-                        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-                        if (user != null) {
-                            login.setText("Find Family");
-                            panic.setVisibility(View.VISIBLE);
-//                            startMapActivity(user.getUid());
-                        } else {
-                            login.setText("Login");
-                            panic.setVisibility(View.INVISIBLE);
-                        }
-                        login.setOnClickListener(loginClickListener);
-                    }
-                }
-            });
+            mAuth.addAuthStateListener(authStateListener);
         } else {
             login.setOnClickListener(loginClickListener);
+        }
+    }
+
+    private void logout() {
+        if (login.getText().equals("Logout")) {
+            Log.i(TAG, "Signing out...");
+            if (user != null) {
+                db.collection("users").document(user.getUid()).get()
+                        .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                            @Override
+                            public void onSuccess(DocumentSnapshot documentSnapshot) {
+                                Map<String, Object> data = documentSnapshot.getData();
+                                if (data != null) {
+                                    data.put("status", "Signed Out");
+                                    db.collection("users").document(user.getUid()).set(data, SetOptions.merge())
+                                            .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                                @Override
+                                                public void onSuccess(Void aVoid) {
+                                                    FirebaseAuth.getInstance().signOut();
+                                                    LoginManager.getInstance().logOut();
+                                                    AuthUI.getInstance().signOut(getApplicationContext());
+                                                    Log.i(TAG, "Signed out...");
+                                                    finish();
+                                                }
+                                            })
+                                            .addOnFailureListener(new OnFailureListener() {
+                                                @Override
+                                                public void onFailure(@NonNull Exception e) {
+                                                    Toast.makeText(LoginActivity.this, "Could not sign out the user", Toast.LENGTH_SHORT).show();
+                                                }
+                                            });
+                                }
+                            }
+                        })
+                        .addOnFailureListener(new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                e.printStackTrace();
+                            }
+                        });
+                myHelper.destroyAlarm();
+                myHelper.stopTrackingService(LoginActivity.this);
+            }
         }
     }
 
@@ -160,7 +221,7 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+        mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         try {
             assert mapFragment != null;
@@ -174,7 +235,7 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
         exit.setOnClickListener(exitClickListener);
         panic = findViewById(R.id.panicButton);
         panic.setOnClickListener(panicClickListener);
-        panic.setVisibility(View.INVISIBLE); //Don't remove. It will be used to send notifications to members
+        panic.setVisibility(View.INVISIBLE);
 
         isLoggedIn();
     }
@@ -183,36 +244,12 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == RC_SIGN_IN) {
-//            IdpResponse response = IdpResponse.fromResultIntent(data);
             if (resultCode == RESULT_OK) {
                 // Successfully signed in
-                login.setText("Find Family");
-                panic.setVisibility(View.VISIBLE);
                 login.setOnClickListener(loginClickListener);
-                FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+                user = mAuth.getCurrentUser();
                 if (user != null) {
-                    final String userId = user.getUid();
-                    FirebaseFirestore db = FirebaseFirestore.getInstance();
-                    db.document("/users/" + userId).get()
-                            .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
-                                @Override
-                                public void onSuccess(DocumentSnapshot documentSnapshot) {
-                                    if (documentSnapshot.get("firstName") != null) {
-//                                        startMapActivity(userId);
-                                        stopService(getIntent());
-                                    } else {
-//                                        startMapActivity(userId);
-                                        startProfileActivity(userId);
-                                        stopService(getIntent());
-                                    }
-                                }
-                            })
-                            .addOnFailureListener(new OnFailureListener() {
-                                @Override
-                                public void onFailure(@NonNull Exception e) {
-                                    e.printStackTrace();
-                                }
-                            });
+                    checkIfAlreadyLoggedIn();
                 }
             } else {
                 // Sign in failed. If response is null the user canceled the
@@ -220,6 +257,72 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
                 // response.getError().getErrorCode() and handle the error.
                 // ...
                 Log.i(TAG, "Login Failure");
+            }
+        }
+    }
+
+    private void checkIfAlreadyLoggedIn() {
+        db.document("/users/" + user.getUid()).get()
+                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                    @Override
+                    public void onSuccess(DocumentSnapshot documentSnapshot) {
+                        Map<String, Object> data = documentSnapshot.getData();
+                        if (data != null) {
+                            data.put("status", "Signed In");
+                            db.document("/users/" + user.getUid()).set(data, SetOptions.merge())
+                                    .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                        @Override
+                                        public void onSuccess(Void aVoid) {
+//                                                Toast.makeText(LoginActivity.this, "Successfully Signed In", Toast.LENGTH_SHORT).show();
+                                            // Successfully signed in
+                                            login.setText("Find Family");
+                                            panic.setVisibility(View.VISIBLE);
+                                            linearLayout.removeAllViews();
+                                            linearLayout.setVisibility(View.GONE);
+                                            login.setEnabled(true);
+                                            subscription = new BillingManager(LoginActivity.this).build();
+                                        }
+                                    })
+                                    .addOnFailureListener(new OnFailureListener() {
+                                        @Override
+                                        public void onFailure(@NonNull Exception e) {
+                                            e.printStackTrace();
+                                            Toast.makeText(LoginActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                                        }
+                                    });
+                        }
+
+                        String firstName = documentSnapshot.getString("firstName");
+                        if (firstName != null) {
+                            if (firstName.equals("")) {
+                                startProfileActivity(user.getUid());
+                                stopService(getIntent());
+                            }
+                        } else {
+                            startProfileActivity(user.getUid());
+                            stopService(getIntent());
+                        }
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        e.printStackTrace();
+                    }
+                });
+
+        if (linearLayoutShow) {
+            linearLayoutShow = false;
+            // Create progressBar dynamically...
+            final ProgressBar progressBar = new ProgressBar(this);
+            progressBar.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+            linearLayout = findViewById(R.id.rootContainer);
+            // Add ProgressBar to LinearLayout
+            if (linearLayout != null) {
+                linearLayout.addView(progressBar);
+                linearLayout.setVisibility(View.VISIBLE);
+                login.setEnabled(false);
             }
         }
     }
@@ -239,9 +342,29 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
     @Override
     protected void onResume() {
         super.onResume();
+        mAuth.addAuthStateListener(authStateListener);
         requestLocation();
         if (mMap != null)
             mMap.setOnCameraMoveStartedListener(moveStartedListener);
+    }
+
+    @Override
+    protected void onPostResume() {
+        super.onPostResume();
+        login.setOnClickListener(loginClickListener);
+        exit.setOnClickListener(exitClickListener);
+        panic.setOnClickListener(panicClickListener);
+        mAuth.addAuthStateListener(authStateListener);
+        if (mMap != null)
+            mMap.setOnCameraMoveStartedListener(moveStartedListener);
+
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            login.setText("Login");
+            panic.setVisibility(View.GONE);
+            linearLayoutShow = true;
+        } else {
+            checkIfAlreadyLoggedIn();
+        }
     }
 
     @Override
@@ -251,10 +374,15 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
             if (grantResults.length <= 0) {
                 Log.i(TAG, "User interaction was cancelled.");
             } else {
-                if ((grantResults[0] == PackageManager.PERMISSION_GRANTED) &&
-                        (grantResults[1] == PackageManager.PERMISSION_GRANTED)) {
+                if ((grantResults[0] == PackageManager.PERMISSION_GRANTED) && (grantResults[1] == PackageManager.PERMISSION_GRANTED)) {
                     // Permission was granted.
-                    Log.i(TAG, "Permission was granted");
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        if (grantResults[2] != PackageManager.PERMISSION_GRANTED) {
+                            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACTIVITY_RECOGNITION}, PERMISSION_REQUEST);
+                        }
+                    } else {
+                        Log.i(TAG, "Permission was granted");
+                    }
                 } else {
                     Snackbar.make(
                             findViewById(R.id.map),
@@ -284,6 +412,13 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
         requestLocation();
+        mMap.getUiSettings().setScrollGesturesEnabled(false);
+        mMap.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
+            @Override
+            public void onCameraIdle() {
+                mMap.getUiSettings().setScrollGesturesEnabled(true);
+            }
+        });
     }
 
     void requestLocation() {
@@ -293,11 +428,20 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
         locationRequest.setInterval(1000);
         locationRequest.setFastestInterval(1000);
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
+            String[] permissions;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                permissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACTIVITY_RECOGNITION};
+
+            } else {
+                permissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION};
+            }
             ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION}
-                    , PERMISSION_REQUEST);
+                    permissions,
+                    PERMISSION_REQUEST);
         }
         client.requestLocationUpdates(locationRequest, new LocationCallback() {
             @Override

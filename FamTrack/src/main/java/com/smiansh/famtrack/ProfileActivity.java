@@ -68,8 +68,8 @@ public class ProfileActivity extends AppCompatActivity {
     private Button update, addMember;
     private ImageView uploadImage;
     private ListView listView;
+    private Map<String, Object> userData = new HashMap<>();
     private FirebaseFirestore db = FirebaseFirestore.getInstance();
-    //    private FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
     private String userId;
     private SharedPreferences sp = null;
 
@@ -157,10 +157,34 @@ public class ProfileActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 if (update.getText().equals("Update")) {
+                    String fName = firstName.getText().toString();
+                    String lName = lastName.getText().toString();
+                    if (fName.isEmpty()) {
+                        firstName.setTextColor(Color.RED);
+                        firstName.setHintTextColor(Color.RED);
+                        firstName.setFocusable(true);
+                        Toast.makeText(ProfileActivity.this, "First Name is Mandatory", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    firstName.setTextColor(Color.BLACK);
+                    firstName.setHintTextColor(Color.BLACK);
+                    if (lName.isEmpty()) {
+                        lastName.setTextColor(Color.RED);
+                        lastName.setHintTextColor(Color.RED);
+                        lastName.setFocusable(true);
+                        Toast.makeText(ProfileActivity.this, "Last Name is Mandatory", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    lastName.setTextColor(Color.BLACK);
+                    lastName.setHintTextColor(Color.BLACK);
                     Map<String, Object> data = new HashMap<>();
-                    data.put("firstName", firstName.getText().toString());
-                    data.put("lastName", lastName.getText().toString());
+                    data.put("firstName", fName);
+                    data.put("lastName", lName);
                     data.put("phone", phone.getText().toString());
+                    if (!userData.containsKey("allowedMembers"))
+                        data.put("allowedMembers", 0);
+                    if (!userData.containsKey("status"))
+                        data.put("status", "Signed In");
                     DocumentReference docRef = db.collection("users").document(userId);
                     docRef.set(data, SetOptions.merge()).addOnFailureListener(new OnFailureListener() {
                         @Override
@@ -361,6 +385,7 @@ public class ProfileActivity extends AppCompatActivity {
                     @Override
                     public void onSuccess(DocumentSnapshot documentSnapshot) {
                         if (documentSnapshot.exists()) {
+                            userData = documentSnapshot.getData();
                             String fName = documentSnapshot.getString("firstName");
                             String lName = documentSnapshot.getString("lastName");
                             firstName.setText(fName);
