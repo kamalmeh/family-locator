@@ -19,7 +19,6 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -58,9 +57,9 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
     private static Marker myMarker;
     private Helper myHelper;
     LinearLayout linearLayout;
-    ConstraintLayout activity_main;
     SupportMapFragment mapFragment;
     private boolean linearLayoutShow = true;
+    public static boolean isTestUser = false;
     private BillingManager subscription;
     private FirebaseFirestore db = FirebaseFirestore.getInstance();
     private FirebaseAuth mAuth = FirebaseAuth.getInstance();
@@ -265,7 +264,7 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
         db.document("/users/" + user.getUid()).get()
                 .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
                     @Override
-                    public void onSuccess(DocumentSnapshot documentSnapshot) {
+                    public void onSuccess(final DocumentSnapshot documentSnapshot) {
                         Map<String, Object> data = documentSnapshot.getData();
                         if (data != null) {
                             data.put("status", "Signed In");
@@ -281,6 +280,9 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
                                             linearLayout.setVisibility(View.GONE);
                                             login.setEnabled(true);
                                             subscription = new BillingManager(LoginActivity.this).build();
+                                            String userType = documentSnapshot.getString("userType");
+                                            if (userType != null && userType.equals("test"))
+                                                isTestUser = true;
                                         }
                                     })
                                     .addOnFailureListener(new OnFailureListener() {
@@ -293,8 +295,10 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
                         }
 
                         String firstName = documentSnapshot.getString("firstName");
-                        if (firstName != null) {
-                            if (firstName.equals("")) {
+                        String lastName = documentSnapshot.getString("lastName");
+                        String userType = documentSnapshot.getString("userType");
+                        if (firstName != null && lastName != null && userType != null) {
+                            if (firstName.equals("") || lastName.equals("")) {
                                 startProfileActivity(user.getUid());
                                 stopService(getIntent());
                             }

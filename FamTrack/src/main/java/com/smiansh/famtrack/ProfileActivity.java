@@ -87,7 +87,28 @@ public class ProfileActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        finish();
+        db.collection("users").document(userId).get()
+                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                    @Override
+                    public void onSuccess(DocumentSnapshot documentSnapshot) {
+                        String firstName = documentSnapshot.getString("firstName");
+                        String lastName = documentSnapshot.getString("lastName");
+                        String userType = documentSnapshot.getString("userType");
+                        if (firstName != null && lastName != null && userType != null) {
+                            if (firstName.equals("") || lastName.equals("")) {
+                                Toast.makeText(ProfileActivity.this, "Please update your \"First Name\" and \"Last Name\"", Toast.LENGTH_SHORT).show();
+                            } else finish();
+                        } else {
+                            Toast.makeText(ProfileActivity.this, "Please Click Edit and then Update to correctly save the profile details", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        e.printStackTrace();
+                    }
+                });
     }
 
     @Override
@@ -183,13 +204,15 @@ public class ProfileActivity extends AppCompatActivity {
                     data.put("phone", phone.getText().toString());
                     if (!userData.containsKey("allowedMembers"))
                         data.put("allowedMembers", 0);
+                    if (!userData.containsKey("userType"))
+                        data.put("userType", "regular");
                     if (!userData.containsKey("status"))
                         data.put("status", "Signed In");
                     DocumentReference docRef = db.collection("users").document(userId);
                     docRef.set(data, SetOptions.merge()).addOnFailureListener(new OnFailureListener() {
                         @Override
                         public void onFailure(@NonNull Exception e) {
-                            Toast.makeText(ProfileActivity.this, e.toString(), Toast.LENGTH_SHORT).show();
+                            Toast.makeText(ProfileActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
                         }
                     });
                     int permission = ContextCompat.checkSelfPermission(ProfileActivity.this,

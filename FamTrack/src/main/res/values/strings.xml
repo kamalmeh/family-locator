@@ -54,10 +54,11 @@
     <string name="addplace">Add New Place</string>
     <string name="places">Current Places</string>
     <string name="renew_button_hint">Renew Subscription</string>
-    <string name="renew_button_text">Renew</string>
+    <string name="renew_button_text">Purchase/Renew</string>
     <string name="upgrade_button_hint">Upgrade Subscription</string>
     <string name="upgrade_button_text">Upgrade</string>
     <string name="location_availibility">No Location Available for your device as of now. Please wait for the location update</string>
+    <string name="buy_subs_msg">No Active subscription is detected. Please Purchase or Renew</string>
     <string-array name="myplaces">
         <item>Home</item>
         <item>Work</item>

@@ -84,6 +84,8 @@ import javax.net.ssl.HttpsURLConnection;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
+import static com.smiansh.famtrack.LoginActivity.isTestUser;
+
 public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback, SharedPreferences.OnSharedPreferenceChangeListener {
     private static final String TAG = "MAPS_ACTIVITY";
     private static final int PERMISSION_REQUEST = 10;
@@ -123,9 +125,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             if (hide.getText().equals("Hide Me")) {
                 hide.setText("Show Me");
                 selfMarker = mMarkers.remove(self);
+                selfMarker.setVisible(false);
                 hideMyLocation = true;
             } else {
                 hide.setText("Hide Me");
+                selfMarker.setVisible(true);
                 mMarkers.put(self, selfMarker);
                 hideMyLocation = false;
             }
@@ -195,7 +199,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void onPostResume() {
         super.onPostResume();
         initialize();
-        if (licencedProduct) {
+        if (licencedProduct || isTestUser) {
             locateFamily();
             subscribeToLocations();
             if (mMarkers.size() > 1)
@@ -376,7 +380,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         hide = findViewById(R.id.hide);
         hide.setOnClickListener(hideClickListener);
 
-        if (!licencedProduct) {
+        if (!licencedProduct || isTestUser) {
             try {
                 MobileAds.initialize(this, getString(R.string.ads));
                 AdView mAdView = findViewById(R.id.adView);
@@ -467,7 +471,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
 
-        if (licencedProduct) {
+        if (licencedProduct || isTestUser) {
             locateFamily();
             subscribeToLocations();
         } else {

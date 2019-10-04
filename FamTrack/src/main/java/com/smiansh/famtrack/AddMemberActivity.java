@@ -27,6 +27,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.smiansh.famtrack.LoginActivity.isTestUser;
+
 public class AddMemberActivity extends AppCompatActivity implements SharedPreferences.OnSharedPreferenceChangeListener {
     Helper myHelper;
     String memberId = "test";
@@ -42,6 +44,7 @@ public class AddMemberActivity extends AppCompatActivity implements SharedPrefer
         @Override
         public void onClick(View v) {
             subscription.launchBillingWorkflow();
+            finish();
         }
     };
     private Map<String, String> family;
@@ -61,7 +64,7 @@ public class AddMemberActivity extends AppCompatActivity implements SharedPrefer
         subscription = new BillingManager(this).build();
         licencedProduct = subscription.getMyPurchases().size() > 0;
         myHelper = new Helper(this);
-        if (!licencedProduct) {
+        if (!licencedProduct || isTestUser) {
             try {
                 MobileAds.initialize(this, getString(R.string.ads));
                 AdView mAdView = findViewById(R.id.adView);
@@ -120,14 +123,10 @@ public class AddMemberActivity extends AppCompatActivity implements SharedPrefer
                                                     if (documentSnapshot != null) {
                                                         String purchaseLicence = documentSnapshot.getString("purchaseLicence");
                                                         try {
-                                                            String temp = documentSnapshot.getString("allowedMembers");
-                                                            if (temp != null) {
-                                                                if (temp.length() == 0) {
-                                                                    allowedMembers = 0;
-                                                                } else {
-                                                                    allowedMembers = Integer.parseInt(temp);
-                                                                }
-                                                            }
+                                                            if (isTestUser)
+                                                                allowedMembers = 1;
+                                                            else
+                                                                allowedMembers = 0;
                                                         } catch (Exception e) {
                                                             e.printStackTrace();
                                                         }
@@ -142,7 +141,7 @@ public class AddMemberActivity extends AppCompatActivity implements SharedPrefer
                                                             if (purchaseList.size() == 0) {
 //                                            Toast.makeText(AddMemberActivity.this, "It seems you don't have any subscription. If you have already subscribed, allow to reflect in the system. You may try after sometime.", Toast.LENGTH_SHORT).show();
 //                                            error.setText("It seems you don't have any subscription.\nIf you have already subscribed, it may be expired. \nPlease renew.");
-                                                                error.setText("Subscription is deactivated. Please renew.");
+                                                                error.setText(R.string.buy_subs_msg);
                                                                 error.setTextColor(Color.RED);
                                                                 error.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
                                                                 error.setVisibility(View.VISIBLE);
@@ -152,8 +151,15 @@ public class AddMemberActivity extends AppCompatActivity implements SharedPrefer
                                                                 renewButton.setOnClickListener(renewUpgradeClickListener);
 //                                            upgradeButton.setVisibility(View.VISIBLE);
                                                             } else if (purchaseList.get(0).getPurchaseToken().equals(purchaseLicence)) {
+                                                                String temp = documentSnapshot.getString("allowedMembers");
+                                                                if (temp != null) {
+                                                                    if (temp.length() == 0) {
+                                                                        allowedMembers = 0;
+                                                                    } else {
+                                                                        allowedMembers = Integer.parseInt(temp);
+                                                                    }
+                                                                }
                                                                 if (family.size() >= allowedMembers) {
-//                                                Toast.makeText(AddMemberActivity.this, "Maximum Members Allowed: "+ allowedMembers, Toast.LENGTH_LONG).show();
                                                                     error.setText("Maximum Members Allowed: " + allowedMembers);
                                                                     error.setVisibility(View.VISIBLE);
                                                                     upgradeButton.setOnClickListener(renewUpgradeClickListener);
@@ -170,6 +176,20 @@ public class AddMemberActivity extends AppCompatActivity implements SharedPrefer
                                                                 subscription.launchBillingWorkflow();
                                                             }
                                                         } else {
+                                                            if (family.size() >= allowedMembers) {
+                                                                Toast.makeText(AddMemberActivity.this, "Maximum Test Members Allowed: " + allowedMembers, Toast.LENGTH_LONG).show();
+                                                                error.setText("Maximum Members Allowed: " + allowedMembers);
+                                                                error.setVisibility(View.VISIBLE);
+                                                                upgradeButton.setOnClickListener(renewUpgradeClickListener);
+                                                            } else {
+                                                                if (memberId != null) {
+                                                                    family.put(memberId, "/users/" + memberId);
+                                                                    Map<String, Object> familyData = new HashMap<>();
+                                                                    familyData.put("family." + memberId, "/users/" + memberId);
+                                                                    docRef.update(familyData);
+                                                                    finish();
+                                                                }
+                                                            }
                                                             subscription.launchBillingWorkflow();
                                                         }
                                                     }

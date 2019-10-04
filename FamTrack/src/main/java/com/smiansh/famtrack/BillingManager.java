@@ -103,6 +103,7 @@ public class BillingManager implements PurchasesUpdatedListener {
                                         String purchaseToken = purchase.getPurchaseToken();
                                         userData.put("purchaseLicence", purchaseToken);
                                         userData.put("allowedMembers", "5");
+                                        userData.put("userType", "regular");
                                         db.document("users/" + user.getUid()).set(userData, SetOptions.merge());
                                         if (!purchase.isAcknowledged()) {
                                             AcknowledgePurchaseParams acknowledgePurchaseParams =

@@ -60,7 +60,11 @@ public class GeofenceBroadcastReceiver extends BroadcastReceiver implements Text
         }
 
         for (int i = 0; i < geofenceTransition; i++) {
-            sendNotification(memberName, " at " + triggeringGeofences.get(i).getRequestId());
+            try {
+                sendNotification(memberName, msg + " at " + triggeringGeofences.get(i).getRequestId());
+            } catch (ArrayIndexOutOfBoundsException e) {
+                e.printStackTrace();
+            }
         }
 
         // Get the transition details as a String.
@@ -76,7 +80,11 @@ public class GeofenceBroadcastReceiver extends BroadcastReceiver implements Text
             List<Geofence> triggeringGeofences) {
         String tGeos = "";
         for (int i = 0; i < triggeringGeofences.size(); i++)
-            tGeos = tGeos.concat(triggeringGeofences.get(i).toString());
+            try {
+                tGeos = tGeos.concat(triggeringGeofences.get(i).toString());
+            } catch (ArrayIndexOutOfBoundsException e) {
+                e.printStackTrace();
+            }
         return geofenceTransition + "," + tGeos;
     }
 
