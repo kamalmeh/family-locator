@@ -2,6 +2,7 @@ package com.smiansh.famtrack;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -16,6 +17,7 @@ import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.provider.Settings;
+import android.telephony.TelephonyManager;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -44,6 +46,7 @@ import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
+import com.hbb20.CountryCodePicker;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -68,6 +71,8 @@ public class ProfileActivity extends AppCompatActivity {
     private Button update, addMember;
     private ImageView uploadImage;
     private ListView listView;
+    CountryCodePicker ccp;
+    private String selectedCountryCode = "";
     private Map<String, Object> userData = new HashMap<>();
     private FirebaseFirestore db = FirebaseFirestore.getInstance();
     private String userId;
@@ -201,7 +206,30 @@ public class ProfileActivity extends AppCompatActivity {
                     Map<String, Object> data = new HashMap<>();
                     data.put("firstName", fName);
                     data.put("lastName", lName);
-                    data.put("phone", phone.getText().toString());
+
+                    TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+                    if (tm != null) {
+                        ccp.setCountryForNameCode(tm.getNetworkCountryIso());
+                    }
+                    if (selectedCountryCode.length() == 0)
+                        selectedCountryCode = ccp.getSelectedCountryCodeWithPlus();
+                    if (phone.getText().toString().length() > 0 && phone.getText().toString().length() < 10) {
+                        AlertDialog.Builder builder = new AlertDialog.Builder(ProfileActivity.this);
+                        builder.setMessage("Please enter 10 digit phone number")
+                                .setCancelable(false)
+                                .setPositiveButton("Back", new DialogInterface.OnClickListener() {
+                                    public void onClick(DialogInterface dialog, int id) {
+                                        dialog.dismiss();
+                                    }
+                                });
+                        AlertDialog alert = builder.create();
+                        alert.show();
+                        return;
+                    } else {
+                        String number = phone.getText().toString();
+                        if (number.length() > 0)
+                            data.put("phone", selectedCountryCode + "-" + number);
+                    }
                     if (!userData.containsKey("allowedMembers"))
                         data.put("allowedMembers", String.valueOf(Helper.ALLOWED_MEMBERS));
                     if (!userData.containsKey("userType"))
@@ -228,7 +256,8 @@ public class ProfileActivity extends AppCompatActivity {
                     lastName.setEnabled(true);
                     phone.setEnabled(true);
                     uploadImage.setEnabled(true);
-                    update.setText("Update");
+                    update.setText(R.string.update);
+                    ccp.setCcpClickable(true);
                 }
             }
         });
@@ -357,7 +386,9 @@ public class ProfileActivity extends AppCompatActivity {
         lastName.setEnabled(false);
         phone.setEnabled(false);
         uploadImage.setEnabled(false);
-        update.setText("Edit");
+        update.setText(R.string.profileEdit);
+        ccp = findViewById(R.id.ccp);
+        ccp.setCcpClickable(false);
 
         sp = PreferenceManager.getDefaultSharedPreferences(this);
 
@@ -413,7 +444,13 @@ public class ProfileActivity extends AppCompatActivity {
                             String lName = documentSnapshot.getString("lastName");
                             firstName.setText(fName);
                             lastName.setText(lName);
-                            phone.setText(documentSnapshot.getString("phone"));
+                            String phoneNumber = documentSnapshot.getString("phone");
+                            if (phoneNumber != null) {
+                                String[] nums = phoneNumber.split("-");
+                                selectedCountryCode = nums[0];
+                                if (nums.length == 2)
+                                    phone.setText(nums[1]);
+                            }
 //                            currUser.setText(getString(R.string.welcome_text, fName, lName));
 
                             @SuppressWarnings("unchecked") Map<String, String> membersList =
@@ -505,6 +542,16 @@ public class ProfileActivity extends AppCompatActivity {
                     }
                 });
     }
+
+    public void onCountryPickerClick(View view) {
+        ccp.setOnCountryChangeListener(new CountryCodePicker.OnCountryChangeListener() {
+            @Override
+            public void onCountrySelected() {
+                selectedCountryCode = ccp.getSelectedCountryCodeWithPlus();
+            }
+        });
+    }
+
 
     @SuppressLint("StaticFieldLeak")
     class DownloadFilesTask extends AsyncTask<URL, Void, Void> {

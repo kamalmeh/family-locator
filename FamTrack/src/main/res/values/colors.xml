@@ -5,4 +5,5 @@
     <color name="colorAccent">#fdbd71</color>
     <color name="requiredField">#ec1c24</color>
     <color name="normal">#FFFFFF</color>
+    <color name="colorGreyF5">#D3D3D3</color>
 </resources>

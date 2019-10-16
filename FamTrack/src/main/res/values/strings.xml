@@ -60,6 +60,15 @@
     <string name="upgrade_button_text">Upgrade</string>
     <string name="location_availibility">No Location Available for your device as of now. Please wait for the location update</string>
     <string name="buy_subs_msg">No Active subscription is detected. Please Purchase or Renew</string>
+    <string name="first_name">First Name</string>
+    <string name="last_name">Last Name</string>
+    <string name="phone_number">Phone Number</string>
+    <string name="phone">Phone</string>
+    <string name="members">Members</string>
+    <string name="update">Update</string>
+    <string name="add_member">Add Member</string>
+    <string name="country">Country</string>
+    <string name="profileEdit">Edit</string>
     <string-array name="myplaces">
         <item>Home</item>
         <item>Work</item>
