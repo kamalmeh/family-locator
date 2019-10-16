@@ -13,9 +13,6 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.android.billingclient.api.Purchase;
-import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.AdView;
-import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.FirebaseAuth;
@@ -34,7 +31,7 @@ public class AddMemberActivity extends AppCompatActivity implements SharedPrefer
     String memberId = "test";
     private EditText authCode;
     private FirebaseFirestore db = FirebaseFirestore.getInstance();
-    private static int allowedMembers = 0;
+    private static int allowedMembers = Helper.ALLOWED_MEMBERS;
     DocumentReference authRef;
     private String userId = FirebaseAuth.getInstance().getUid();
     Button renewButton, upgradeButton, addButton;
@@ -64,16 +61,16 @@ public class AddMemberActivity extends AppCompatActivity implements SharedPrefer
         subscription = new BillingManager(this).build();
         licencedProduct = subscription.getMyPurchases().size() > 0;
         myHelper = new Helper(this);
-        if (!licencedProduct || isTestUser) {
-            try {
-                MobileAds.initialize(this, getString(R.string.ads));
-                AdView mAdView = findViewById(R.id.adView);
-                AdRequest adRequest = new AdRequest.Builder().build();
-                mAdView.loadAd(adRequest);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+//        if (!licencedProduct || isTestUser) {
+//            try {
+//                MobileAds.initialize(this, getString(R.string.ads));
+//                AdView mAdView = findViewById(R.id.adView);
+//                AdRequest adRequest = new AdRequest.Builder().build();
+//                mAdView.loadAd(adRequest);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+//        }
         addButton = findViewById(R.id.addButton);
         authCode = findViewById(R.id.authCode);
         renewButton = findViewById(R.id.renewButton);
@@ -126,7 +123,7 @@ public class AddMemberActivity extends AppCompatActivity implements SharedPrefer
                                                             if (isTestUser)
                                                                 allowedMembers = 1;
                                                             else
-                                                                allowedMembers = 0;
+                                                                allowedMembers = Helper.ALLOWED_MEMBERS;
                                                         } catch (Exception e) {
                                                             e.printStackTrace();
                                                         }
@@ -137,32 +134,21 @@ public class AddMemberActivity extends AppCompatActivity implements SharedPrefer
                                                         }
 
                                                         List<Purchase> purchaseList = subscription.getMyPurchases();
-                                                        if (purchaseList != null) {
+                                                        if (purchaseList != null && !isTestUser) {
                                                             if (purchaseList.size() == 0) {
 //                                            Toast.makeText(AddMemberActivity.this, "It seems you don't have any subscription. If you have already subscribed, allow to reflect in the system. You may try after sometime.", Toast.LENGTH_SHORT).show();
 //                                            error.setText("It seems you don't have any subscription.\nIf you have already subscribed, it may be expired. \nPlease renew.");
-                                                                error.setText(R.string.buy_subs_msg);
-                                                                error.setTextColor(Color.RED);
-                                                                error.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
-                                                                error.setVisibility(View.VISIBLE);
-                                                                authCode.setVisibility(View.GONE);
-                                                                addButton.setVisibility(View.GONE);
-                                                                renewButton.setVisibility(View.VISIBLE);
-                                                                renewButton.setOnClickListener(renewUpgradeClickListener);
-//                                            upgradeButton.setVisibility(View.VISIBLE);
-                                                            } else if (purchaseList.get(0).getPurchaseToken().equals(purchaseLicence)) {
-                                                                String temp = documentSnapshot.getString("allowedMembers");
-                                                                if (temp != null) {
-                                                                    if (temp.length() == 0) {
-                                                                        allowedMembers = 0;
-                                                                    } else {
-                                                                        allowedMembers = Integer.parseInt(temp);
-                                                                    }
-                                                                }
                                                                 if (family.size() >= allowedMembers) {
                                                                     error.setText("Maximum Members Allowed: " + allowedMembers);
                                                                     error.setVisibility(View.VISIBLE);
-                                                                    upgradeButton.setOnClickListener(renewUpgradeClickListener);
+                                                                    error.setText(R.string.buy_subs_msg);
+                                                                    error.setTextColor(Color.RED);
+                                                                    error.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+                                                                    error.setVisibility(View.VISIBLE);
+                                                                    authCode.setVisibility(View.GONE);
+                                                                    addButton.setVisibility(View.GONE);
+                                                                    renewButton.setVisibility(View.VISIBLE);
+                                                                    renewButton.setOnClickListener(renewUpgradeClickListener);
                                                                 } else {
                                                                     if (memberId != null) {
                                                                         family.put(memberId, "/users/" + memberId);
@@ -172,8 +158,28 @@ public class AddMemberActivity extends AppCompatActivity implements SharedPrefer
                                                                         finish();
                                                                     }
                                                                 }
-                                                            } else {
-                                                                subscription.launchBillingWorkflow();
+                                                            } else if (purchaseList.get(0).getPurchaseToken().equals(purchaseLicence)) {
+                                                                String temp = documentSnapshot.getString("allowedMembers");
+                                                                if (temp != null) {
+                                                                    if (temp.length() == 0) {
+                                                                        allowedMembers = Helper.ALLOWED_MEMBERS;
+                                                                    } else {
+                                                                        allowedMembers = Integer.parseInt(temp);
+                                                                    }
+                                                                }
+                                                                if (family.size() >= allowedMembers) {
+                                                                    error.setText("Maximum Members Allowed: " + allowedMembers);
+                                                                    error.setVisibility(View.VISIBLE);
+//                                                                    upgradeButton.setOnClickListener(renewUpgradeClickListener);
+                                                                } else {
+                                                                    if (memberId != null) {
+                                                                        family.put(memberId, "/users/" + memberId);
+                                                                        Map<String, Object> familyData = new HashMap<>();
+                                                                        familyData.put("family." + memberId, "/users/" + memberId);
+                                                                        docRef.update(familyData);
+                                                                        finish();
+                                                                    }
+                                                                }
                                                             }
                                                         } else {
                                                             if (family.size() >= allowedMembers) {
@@ -190,7 +196,6 @@ public class AddMemberActivity extends AppCompatActivity implements SharedPrefer
                                                                     finish();
                                                                 }
                                                             }
-                                                            subscription.launchBillingWorkflow();
                                                         }
                                                     }
                                                 }

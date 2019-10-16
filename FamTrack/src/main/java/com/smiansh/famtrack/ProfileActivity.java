@@ -203,7 +203,7 @@ public class ProfileActivity extends AppCompatActivity {
                     data.put("lastName", lName);
                     data.put("phone", phone.getText().toString());
                     if (!userData.containsKey("allowedMembers"))
-                        data.put("allowedMembers", 0);
+                        data.put("allowedMembers", String.valueOf(Helper.ALLOWED_MEMBERS));
                     if (!userData.containsKey("userType"))
                         data.put("userType", "regular");
                     if (!userData.containsKey("status"))

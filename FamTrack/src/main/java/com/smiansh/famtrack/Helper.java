@@ -55,6 +55,7 @@ import de.hdodenhof.circleimageview.CircleImageView;
 import static android.content.Context.ALARM_SERVICE;
 
 class Helper {
+    public static final int ALLOWED_MEMBERS = 1;
     private static String CHANNEL;
     private static String CHANNEL_ID;
     private static AlarmManager am;
@@ -192,7 +193,7 @@ class Helper {
         return bitmap;
     }
 
-    Notification getNotification() {
+    Notification getNotification(String activity) {
         String CHANNEL_ID = context.getString(R.string.channel);
         String CHANNEL = context.getString(R.string.channel_id);
         Notification myNotification;
@@ -227,23 +228,28 @@ class Helper {
                 .setContentIntent(pIntent)
                 .addAction(R.drawable.ic_paper_plane, "Open", pIntent)
 //                .addAction(R.drawable.ic_message_black_24dp,"Message",msgIntent)
-                .setStyle(new androidx.media.app.NotificationCompat.MediaStyle())
+//                .setStyle(new androidx.media.app.NotificationCompat.MediaStyle())
+                .setStyle(new NotificationCompat.BigTextStyle()
+                        .bigText(context.getString(R.string.notification_message))
+                        .setSummaryText(activity)
+                )
                 .setAutoCancel(true)
-                .setTimeoutAfter(10000)
+                .setTimeoutAfter(1000)
+                .setVisibility(NotificationCompat.VISIBILITY_SECRET)
 //                .setOngoing(true)
-                .setPriority(NotificationCompat.PRIORITY_LOW);
+                .setPriority(NotificationCompat.PRIORITY_MIN);
         builder.setContentText(context.getString(R.string.notification_message));
         myNotification = builder.build();
         return myNotification;
     }
 
-    void sendNote() {
-        setChannel(context.getString(R.string.channel));
-        setChannelId(context.getString(R.string.channel_id));
-        if (notificationManager != null) {
-            notificationManager.notify(NOTIFICATION_SERVICE_ID + 1, this.getNotification());
-        }
-    }
+//    void sendNote() {
+//        setChannel(context.getString(R.string.channel));
+//        setChannelId(context.getString(R.string.channel_id));
+//        if (notificationManager != null) {
+//            notificationManager.notify(NOTIFICATION_SERVICE_ID + 1, this.getNotification());
+//        }
+//    }
 
     void sendSMS(final String message) {
         String userId = currUser.getUid();

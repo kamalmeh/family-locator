@@ -39,9 +39,6 @@ import androidx.core.content.ContextCompat;
 
 import com.facebook.login.LoginManager;
 import com.firebase.ui.auth.AuthUI;
-import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.AdView;
-import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -109,6 +106,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private HashMap<String, String> userStatuss = new HashMap<>();
     private boolean licencedProduct = false;
     private Button recenter, hide;
+    boolean skipFlag = false;
+
     View.OnClickListener recenterClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
@@ -380,16 +379,16 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         hide = findViewById(R.id.hide);
         hide.setOnClickListener(hideClickListener);
 
-        if (!licencedProduct || isTestUser) {
-            try {
-                MobileAds.initialize(this, getString(R.string.ads));
-                AdView mAdView = findViewById(R.id.adView);
-                AdRequest adRequest = new AdRequest.Builder().build();
-                mAdView.loadAd(adRequest);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+//        if (!licencedProduct || isTestUser) {
+//            try {
+//                MobileAds.initialize(this, getString(R.string.ads));
+//                AdView mAdView = findViewById(R.id.adView);
+//                AdRequest adRequest = new AdRequest.Builder().build();
+//                mAdView.loadAd(adRequest);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+//        }
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -472,11 +471,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
 
         if (licencedProduct || isTestUser) {
-            locateFamily();
             subscribeToLocations();
         } else {
             selfSubscribe();
         }
+        locateFamily();
     }
 
     private void selfSubscribe() {
@@ -705,8 +704,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         public void onSuccess(DocumentSnapshot documentSnapshot) {
                             try {
                                 self = documentSnapshot.getString("firstName");
+                                final String temp = documentSnapshot.getString("allowedMembers");
                                 //noinspection unchecked
-                                Map<String, Object> family = (Map<String, Object>) documentSnapshot.get("family");
+                                final Map<String, Object> family = (Map<String, Object>) documentSnapshot.get("family");
                                 if (family != null) {
                                     for (Map.Entry row : family.entrySet()) {
                                         DocumentReference localDocRef = db.document(row.getValue().toString());
@@ -714,7 +714,20 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                                 .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
                                                     @Override
                                                     public void onSuccess(DocumentSnapshot documentSnapshot) {
-                                                        setMarker(documentSnapshot);
+                                                        int allowedMembers = Helper.ALLOWED_MEMBERS;
+                                                        if (temp != null) {
+                                                            if (temp.length() > Helper.ALLOWED_MEMBERS) {
+                                                                allowedMembers = Integer.parseInt(temp);
+                                                            }
+                                                        }
+                                                        int familySize = family.size();
+                                                        if (!licencedProduct)
+                                                            familySize = Helper.ALLOWED_MEMBERS;
+                                                        if (familySize <= allowedMembers && !skipFlag) {
+                                                            setMarker(documentSnapshot);
+                                                            if (!licencedProduct)
+                                                                skipFlag = true;
+                                                        }
                                                     }
                                                 })
                                                 .addOnFailureListener(new OnFailureListener() {

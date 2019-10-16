@@ -237,6 +237,10 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
         panic.setVisibility(View.INVISIBLE);
 
         isLoggedIn();
+        // ATTENTION: This was auto-generated to handle app links.
+        Intent appLinkIntent = getIntent();
+        String appLinkAction = appLinkIntent.getAction();
+        Uri appLinkData = appLinkIntent.getData();
     }
 
     @Override

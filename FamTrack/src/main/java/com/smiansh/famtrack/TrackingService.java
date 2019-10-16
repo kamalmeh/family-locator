@@ -112,8 +112,13 @@ public class TrackingService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
-        requestInterval = intent.getLongExtra("requestInterval", 30000);
-        activity = intent.getStringExtra("activity");
+        try {
+            requestInterval = intent.getLongExtra("requestInterval", 600000);
+            activity = intent.getStringExtra("activity");
+            startForeground(Helper.NOTIFICATION_SERVICE_ID, myHelper.getNotification(activity));
+        } catch (NullPointerException e) {
+            e.printStackTrace();
+        }
         mLocationRequest = createLocationRequest();
         client = LocationServices.getFusedLocationProviderClient(getApplicationContext());
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -218,7 +223,7 @@ public class TrackingService extends Service {
     public void onCreate() {
         super.onCreate();
         myHelper = new Helper(getApplicationContext());
-        startForeground(Helper.NOTIFICATION_SERVICE_ID, myHelper.getNotification());
+        startForeground(Helper.NOTIFICATION_SERVICE_ID, myHelper.getNotification(activity));
         sd = new SimpleDateFormat(getString(R.string.date_format), Locale.getDefault());
         sp = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         try {
@@ -228,7 +233,8 @@ public class TrackingService extends Service {
             e.printStackTrace();
         }
         if (FirebaseAuth.getInstance().getCurrentUser() != null) {
-            defineGeofences();
+//            Temporarily disabled the Geofence feature
+//            defineGeofences();
             subscribeToEmergencyMessages();
         }
     }

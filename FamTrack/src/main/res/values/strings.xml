@@ -53,6 +53,7 @@
     <string name="unknown_geofence_error">unknown_geofence_error</string>
     <string name="addplace">Add New Place</string>
     <string name="places">Current Places</string>
+    <string name="submit">Purchase</string>
     <string name="renew_button_hint">Renew Subscription</string>
     <string name="renew_button_text">Purchase/Renew</string>
     <string name="upgrade_button_hint">Upgrade Subscription</string>

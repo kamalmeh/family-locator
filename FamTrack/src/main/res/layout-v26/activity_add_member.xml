@@ -12,16 +12,18 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
+        android:autoSizeTextType="uniform"
+        android:autofillHints="yes"
         android:hint="@string/authcode_hint"
         android:inputType="text"
         ads:layout_constraintTop_toBottomOf="@+id/error"
-        android:importantForAutofill="no"
         tools:layout_editor_absoluteX="0dp" />
 
     <TextView
         android:id="@+id/error"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:autoSizeTextType="uniform"
         android:textAlignment="center"
         ads:layout_constraintBottom_toTopOf="@id/addButton"
         ads:layout_constraintTop_toTopOf="parent" />

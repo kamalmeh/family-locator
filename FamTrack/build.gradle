@@ -8,8 +8,8 @@ android {
         applicationId "com.smiansh.famtrack"
         minSdkVersion 21
         targetSdkVersion 29
-        versionCode 12
-        versionName "1.12"
+        versionCode 13
+        versionName "1.13"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -28,11 +28,11 @@ dependencies {
     implementation 'com.google.firebase:firebase-firestore:21.1.1'
     implementation 'com.firebaseui:firebase-ui-firestore:5.0.0'
     implementation 'com.firebaseui:firebase-ui-auth:5.0.0'
-    implementation 'com.google.firebase:firebase-auth:19.0.0'
+    implementation 'com.google.firebase:firebase-auth:19.1.0'
     implementation 'com.google.android.material:material:1.1.0-alpha10'
     implementation 'com.google.android.gms:play-services-maps:17.0.0'
     implementation 'com.google.android.gms:play-services-location:17.0.0'
-    implementation 'com.google.firebase:firebase-storage:19.0.1'
+    implementation 'com.google.firebase:firebase-storage:19.1.0'
     implementation 'de.hdodenhof:circleimageview:3.0.1'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation 'androidx.legacy:legacy-support-v13:1.0.0'
