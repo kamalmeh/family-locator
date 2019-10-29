@@ -7,65 +7,80 @@
     android:orientation="vertical"
     tools:context=".AddMemberActivity">
 
-    <EditText
-        android:id="@+id/authCode"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:autoSizeTextType="uniform"
-        android:autofillHints="yes"
-        android:hint="@string/authcode_hint"
-        android:inputType="text"
-        ads:layout_constraintTop_toBottomOf="@+id/error"
-        tools:layout_editor_absoluteX="0dp" />
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/error"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:autoSizeTextType="uniform"
-        android:textAlignment="center"
-        ads:layout_constraintBottom_toTopOf="@id/addButton"
-        ads:layout_constraintTop_toTopOf="parent" />
+        <TextView
+            android:id="@+id/info"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/add_member_detail_desc"
+            android:textAlignment="center"
+            android:textSize="25sp"
+            ads:layout_constraintBottom_toTopOf="@id/authCode"
+            tools:layout_editor_absoluteX="0dp" />
 
-    <Button
-        android:id="@+id/addButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:background="@drawable/button_style"
-        android:hint="@string/authcode_button_hint"
-        android:text="@string/authcode_button_text"
-        ads:layout_constraintTop_toBottomOf="@+id/authCode" />
+        <TextView
+            android:id="@+id/error"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:autoSizeTextType="uniform"
+            android:textAlignment="center"
+            ads:layout_constraintBottom_toTopOf="@id/authCode"
+            ads:layout_constraintTop_toTopOf="parent" />
 
-    <Button
-        android:id="@+id/renewButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:background="@drawable/button_style"
-        android:hint="@string/renew_button_hint"
-        android:text="@string/renew_button_text"
-        android:visibility="gone"
-        ads:layout_constraintTop_toBottomOf="@+id/addButton" />
+        <EditText
+            android:id="@+id/authCode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:autoSizeTextType="uniform"
+            android:autofillHints="yes"
+            android:hint="@string/authcode_hint"
+            android:inputType="text"
+            ads:layout_constraintBottom_toTopOf="@+id/addButton"
+            tools:layout_editor_absoluteX="0dp" />
 
-    <Button
-        android:id="@+id/upgradeButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:background="@drawable/button_style"
-        android:hint="@string/upgrade_button_hint"
-        android:text="@string/upgrade_button_text"
-        android:visibility="gone"
-        ads:layout_constraintTop_toBottomOf="@+id/renewButton" />
+        <Button
+            android:id="@+id/addButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/button_style"
+            android:hint="@string/authcode_button_hint"
+            android:text="@string/authcode_button_text"
+            ads:layout_constraintBottom_toTopOf="@+id/renewButton" />
+
+        <Button
+            android:id="@+id/renewButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/button_style"
+            android:hint="@string/renew_button_hint"
+            android:text="@string/renew_button_text"
+            android:visibility="gone"
+            ads:layout_constraintBottom_toTopOf="@+id/upgradeButton" />
+
+        <Button
+            android:id="@+id/upgradeButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/button_style"
+            android:hint="@string/upgrade_button_hint"
+            android:text="@string/upgrade_button_text"
+            android:visibility="gone"
+            ads:layout_constraintBottom_toTopOf="@+id/adView" />
+    </LinearLayout>
 
     <com.google.android.gms.ads.AdView
         android:id="@+id/adView"
-        android:layout_width="360dp"
+        android:layout_width="match_parent"
         android:layout_height="77dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
         ads:adSize="SMART_BANNER"
         ads:adUnitId="@string/ads"
         ads:layout_constraintBottom_toBottomOf="parent"

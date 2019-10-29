@@ -213,7 +213,7 @@ public class ProfileActivity extends AppCompatActivity {
                     }
                     if (selectedCountryCode.length() == 0)
                         selectedCountryCode = ccp.getSelectedCountryCodeWithPlus();
-                    if (phone.getText().toString().length() > 0 && phone.getText().toString().length() < 10) {
+                    if (phone.getText().toString().length() > 0 && phone.getText().toString().length() != 10) {
                         AlertDialog.Builder builder = new AlertDialog.Builder(ProfileActivity.this);
                         builder.setMessage("Please enter 10 digit phone number")
                                 .setCancelable(false)
@@ -227,7 +227,7 @@ public class ProfileActivity extends AppCompatActivity {
                         return;
                     } else {
                         String number = phone.getText().toString();
-                        if (number.length() > 0)
+                        if (number.length() == 10)
                             data.put("phone", selectedCountryCode + "-" + number);
                     }
                     if (!userData.containsKey("allowedMembers"))

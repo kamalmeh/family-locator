@@ -176,7 +176,7 @@ class Helper {
 
         CircleImageView markerImage = marker.findViewById(R.id.user_dp);
         if (bmp == null)
-            markerImage.setImageResource(R.drawable.ic_boy);
+            markerImage.setImageResource(R.drawable.ic_user_silhouette);
         else
             markerImage.setImageBitmap(bmp);
 

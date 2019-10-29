@@ -13,7 +13,7 @@
     <string name="ok">OK</string>
     <string name="title_activity_maps">Map</string>
     <string name="unknown_location">Unknown location</string>
-    <string name="authDesc">Share this authentication code to your family member to join you</string>
+    <string name="authDesc">Share this authentication code to your family member to add in his app to track your live location</string>
     <string name="download_profile_pic">https://</string>
     <string name="welcome_text">Safe Circle</string>
     <string name="authcode_hint">6 Character Authentication Code</string>
@@ -73,4 +73,32 @@
         <item>Home</item>
         <item>Work</item>
     </string-array>
+    <string name="title_activity_welcome">Home Screen</string>
+    <string name="next">NEXT</string>
+    <string name="skip">SKIP</string>
+    <string name="start">GOT IT</string>
+
+    <string name="slide_1_title">Welcome to</string>
+    <string name="slide_1_desc">It is extremely easy to find your family members with Safe Circle.</string>
+
+    <string name="slide_2_title">App Install</string>
+    <string name="slide_2_desc">Install the App on all devices participating in tracking activity.</string>
+
+    <string name="slide_3_title">Authorization Code</string>
+    <string name="slide_3_desc">Exchange the Code with each other or either member can share the code to other to add from "Add Member" screen</string>
+
+    <string name="slide_4_title">World Travel</string>
+    <string name="slide_4_desc">Book tickets of any transportation and travel the world!</string>
+
+    <string name="play_again_desc">To see the welcome slider again, goto Settings -> apps -> welcome slider -> clear data</string>
+    <string name="play_again">Play Again</string>
+    <string name="image">Image</string>
+    <string name="plane">Paper Plane</string>
+    <string name="mapview">View All Your Family Members in Map View</string>
+    <string name="add_member_detail_desc">Ask your family member to install the app and provide you the 6 Digit Authentication Code to enter in below</string>
+    <string name="enter_the_address">Enter the address</string>
+    <string name="enter">Enter</string>
+    <string name="location_button">Find My Location</string>
+    <string name="address">Modify the Address if you want</string>
+    <string name="hide_me_button">Hide Me</string>
 </resources>

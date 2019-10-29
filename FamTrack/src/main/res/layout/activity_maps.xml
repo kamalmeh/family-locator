@@ -37,7 +37,7 @@
         android:layout_below="@+id/map"
         android:layout_marginStart="16dp"
         android:background="@drawable/button_style"
-        android:text="Hide Me"
+        android:text="@string/hide_me_button"
         android:visibility="invisible"
         ads:layout_constraintBottom_toTopOf="@+id/adView"
         ads:layout_constraintStart_toStartOf="parent"

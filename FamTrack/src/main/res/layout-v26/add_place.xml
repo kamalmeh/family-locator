@@ -11,12 +11,11 @@
         android:layout_height="150dp"
         android:layout_gravity="top|start"
         android:layout_margin="10dp"
-        android:hint="@string/enter_the_address"
+        android:autofillHints="Enter the address"
         android:inputType="textCapSentences|textMultiLine"
         android:labelFor="@+id/address"
         android:lines="5"
         android:scrollHorizontally="false"
-        android:importantForAutofill="no"
         android:text="@string/enter"
         android:visibility="gone" />
 
@@ -33,7 +32,7 @@
             android:layout_centerInParent="true"
             android:layout_margin="10dp"
             android:background="@drawable/ic_my_location_black_24dp"
-            android:contentDescription="My Location Button" />
+            android:contentDescription="@string/location_button" />
 
     </RelativeLayout>
 
@@ -48,7 +47,7 @@
         android:id="@+id/label"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Modify the Address if you want"
+        android:text="@string/address"
         android:textAlignment="center"
         android:textColor="@color/requiredField"
         android:visibility="gone" />

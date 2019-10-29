@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:dist="http://schemas.android.com/apk/distribution"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.smiansh.famtrack">
 
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -16,6 +17,8 @@
         android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION"
         android:maxSdkVersion="28" />
 
+    <dist:module dist:instant="true" />
+
     <application
         android:allowBackup="true"
         android:description="@string/description"
@@ -25,19 +28,25 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".GeofenceActivity" />
-        <activity android:name=".LoginActivity">
+        <activity android:name=".WelcomeActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <intent-filter>
+        </activity>
+        <activity android:name=".GeofenceActivity" />
+        <activity android:name=".LoginActivity">
+            <intent-filter
+                android:autoVerify="true"
+                tools:targetApi="m">
                 <action android:name="android.intent.action.VIEW" />
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
+                <data android:scheme="http" />
+                <data android:scheme="https" />
                 <data
                     android:host="www.smiansh.com"
                     android:scheme="https" />
@@ -98,7 +107,5 @@
             android:enabled="true" />
         <service android:name=".ReadTheMessage" />
     </application>
-
-    <dist:module dist:instant="true" />
 
 </manifest>
