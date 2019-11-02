@@ -12,10 +12,6 @@
         android:name="com.google.android.gms.maps.SupportMapFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginBottom="8dp"
         map:cameraZoom="15"
         map:layout_constraintBottom_toBottomOf="parent"
         map:layout_constraintEnd_toEndOf="parent"
@@ -32,73 +28,70 @@
     <!--tools:layout_editor_absoluteX="6dp"-->
     <!--tools:layout_editor_absoluteY="37dp">-->
 
-    <TextView
+    <com.google.android.material.textview.MaterialTextView
         android:id="@+id/greeting"
         android:layout_width="match_parent"
         android:layout_height="100sp"
         android:layout_below="@+id/map"
-        android:layout_marginBottom="8dp"
         android:drawableBottom="@drawable/ic_map_marker_point"
         android:text="@string/welcome_text"
         android:textAlignment="center"
         app:autoSizeTextType="uniform"
-        app:layout_constraintBottom_toTopOf="@+id/panicButton"
+        app:layout_constraintBottom_toTopOf="@+id/buttonGroup"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.163"
         tools:layout_editor_absoluteX="8dp" />
     <!--</LinearLayout>-->
-
-    <Button
-        android:id="@+id/login"
-        android:layout_width="197sp"
-        android:layout_height="62sp"
-        android:layout_below="@+id/map"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginBottom="24dp"
-        android:background="@drawable/button_style"
-        android:text="@string/logintext"
-        app:layout_constraintBottom_toTopOf="@+id/exit"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <Button
-        android:id="@+id/exit"
-        android:layout_width="197sp"
-        android:layout_height="62sp"
-        android:layout_below="@+id/map"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginBottom="8dp"
-        android:background="@drawable/button_style"
-        android:text="@string/exittext"
-        app:layout_constraintBottom_toBottomOf="@+id/map"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <Button
-        android:id="@+id/panicButton"
-        android:layout_width="197sp"
-        android:layout_height="62sp"
-        android:layout_below="@+id/map"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginBottom="24dp"
-        android:background="@drawable/button_style"
-        android:text="@string/panic"
-        app:layout_constraintBottom_toTopOf="@+id/login"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <LinearLayout
-        android:id="@+id/rootContainer"
-        android:layout_width="wrap_content"
+    <com.google.android.material.circularreveal.CircularRevealLinearLayout
+        android:id="@+id/buttonGroup"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_below="@+id/map"
+        android:gravity="center"
         android:orientation="vertical"
-        android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@+id/panicButton"
-        app:layout_constraintEnd_toEndOf="@+id/map"
-        app:layout_constraintStart_toStartOf="@+id/map"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintBottom_toBottomOf="parent">
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/panicButton"
+            android:layout_width="@dimen/login_button_width"
+            android:layout_height="wrap_content"
+            android:layout_margin="5dp"
+            android:text="@string/panic"
+            app:layout_constraintBottom_toTopOf="@+id/login"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/login"
+            android:layout_width="@dimen/login_button_width"
+            android:layout_height="wrap_content"
+            android:layout_margin="5dp"
+            android:text="@string/logintext"
+            app:layout_constraintBottom_toTopOf="@+id/exit"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/exit"
+            android:layout_width="@dimen/login_button_width"
+            android:layout_height="wrap_content"
+            android:layout_margin="5dp"
+            android:text="@string/exittext"
+            app:layout_constraintBottom_toBottomOf="@+id/map"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+    </com.google.android.material.circularreveal.CircularRevealLinearLayout>
+
+    <com.google.android.material.circularreveal.CircularRevealLinearLayout
+        android:id="@+id/rootContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="#80D3D3D3"
+        android:visibility="gone"
+        android:gravity="center"
+        app:layout_constraintBottom_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -5,37 +5,22 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
-    <de.hdodenhof.circleimageview.CircleImageView
-        android:id="@+id/user_dp"
-        android:layout_width="35dp"
-        android:layout_height="35dp"
-        android:layout_alignParentTop="true"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginStart="12dp"
-        android:layout_marginTop="5dp"
-        android:contentDescription="@null"
-        android:src="@drawable/ic_user_silhouette"
-        app:civ_border_color="#fff" />
-
     <RelativeLayout
+        android:id="@+id/mark"
         android:layout_width="60dp"
         android:layout_height="60dp"
         android:background="@drawable/ic_map_marker_point"
-        android:backgroundTint="@color/colorPrimary">
-
-        <!--android:layout_marginLeft="10dp"-->
-        <!--android:text="janet John"-->
-        <!--android:textSize="7sp"-->
-        <!--<TextView-->
-        <!--android:id="@+id/name"-->
-        <!--android:layout_width="match_parent"-->
-        <!--android:layout_height="wrap_content"-->
-        <!--android:layout_centerHorizontal="true"-->
-        <!--android:layout_centerVertical="true"-->
-        <!--android:alpha="0.8"-->
-        <!--android:background="@drawable/ic_map_marker_point"-->
-        <!--android:gravity="center"-->
-        <!--android:textColor="#000"-->
-        <!--android:visibility="gone" />-->
-    </RelativeLayout>
+        android:backgroundTint="@color/colorAccent"></RelativeLayout>
+    <de.hdodenhof.circleimageview.CircleImageView
+        android:id="@+id/user_dp"
+        android:layout_width="40sp"
+        android:layout_height="40sp"
+        android:layout_alignParentTop="true"
+        android:layout_gravity="center_horizontal"
+        android:layout_below="@+id/mark"
+        android:layout_marginStart="10sp"
+        android:layout_marginTop="3sp"
+        android:contentDescription="@null"
+        android:src="@drawable/ic_person_profile_24dp"
+        app:civ_border_color="#fff" />
 </RelativeLayout>

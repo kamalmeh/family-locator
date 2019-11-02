@@ -10,8 +10,11 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_margin="10dp"
         android:gravity="center"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        ads:layout_constraintBottom_toBottomOf="parent"
+        tools:layout_editor_absoluteX="10dp">
 
         <TextView
             android:id="@+id/info"
@@ -19,7 +22,7 @@
             android:layout_height="wrap_content"
             android:text="@string/add_member_detail_desc"
             android:textAlignment="center"
-            android:textSize="25sp"
+            android:textSize="16sp"
             ads:layout_constraintBottom_toTopOf="@id/authCode"
             tools:layout_editor_absoluteX="0dp" />
 
@@ -29,7 +32,7 @@
             android:layout_height="wrap_content"
             android:textAlignment="center"
             ads:layout_constraintBottom_toTopOf="@id/authCode"
-            tools:layout_editor_absoluteX="0dp" />
+            ads:layout_constraintTop_toTopOf="parent" />
 
         <EditText
             android:id="@+id/authCode"
@@ -37,28 +40,26 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:hint="@string/authcode_hint"
-            android:importantForAutofill="no"
             android:inputType="text"
-            ads:layout_constraintBottom_toTopOf="@id/addButton"
+            android:textAlignment="center"
+            android:importantForAutofill="no"
+            ads:layout_constraintBottom_toTopOf="@+id/addButton"
             tools:layout_editor_absoluteX="0dp" />
 
         <Button
             android:id="@+id/addButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="68dp"
-            android:background="@drawable/button_style"
+            android:layout_marginTop="8dp"
             android:hint="@string/authcode_button_hint"
             android:text="@string/authcode_button_text"
-            ads:layout_constraintBottom_toTopOf="@+id/renewButton"
-            tools:layout_editor_absoluteX="0dp" />
+            ads:layout_constraintBottom_toTopOf="@+id/renewButton" />
 
         <Button
             android:id="@+id/renewButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:background="@drawable/button_style"
             android:hint="@string/renew_button_hint"
             android:text="@string/renew_button_text"
             android:visibility="gone"
@@ -69,17 +70,16 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:background="@drawable/button_style"
             android:hint="@string/upgrade_button_hint"
             android:text="@string/upgrade_button_text"
             android:visibility="gone"
-            ads:layout_constraintBottom_toTopOf="@id/adView" />
+            ads:layout_constraintBottom_toTopOf="@+id/adView" />
     </LinearLayout>
 
     <com.google.android.gms.ads.AdView
         android:id="@+id/adView"
         android:layout_width="match_parent"
-        android:layout_height="77dp"
+        android:layout_height="wrap_content"
         ads:adSize="SMART_BANNER"
         ads:adUnitId="@string/ads"
         ads:layout_constraintBottom_toBottomOf="parent"

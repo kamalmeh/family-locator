@@ -1,25 +1,27 @@
 <resources>
-
     <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+    <style name="AppTheme.Base" parent="Theme.MaterialComponents.Light.NoActionBar">
         <!-- Customize your theme here. -->
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:navigationBarColor">@color/colorPrimaryDark</item>
+        <item name="buttonStyle">@style/RobotoButtonStyle</item>
+        <item name="android:fontFamily">Arial</item>
+        <!--        <item name="android:textColorPrimary">@color/textColorPrimary</item>-->
+        <item name="android:windowBackground">@color/windowBackground</item>
     </style>
 
-    <!-- Base application theme. -->
-    <style name="SliderTheme" parent="Theme.AppCompat.Light.DarkActionBar">
-        <!-- Customize your theme here. -->
-        <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-        <item name="colorAccent">@color/colorAccent</item>
-        <item name="windowActionBar">false</item>
-        <item name="windowNoTitle">true</item>
+    <style name="RobotoButtonStyle" parent="android:Widget.Material.Button">
+        <item name="android:fontFamily">Arial</item>
+        <item name="android:shadowColor">@color/colorGreyF5</item>
+        <item name="android:elevation">2dp</item>
     </style>
 
-    <style name="SliderTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+    <style name="AppTheme" parent="AppTheme.Base" />
 
-    <style name="SliderTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+    <style name="AppTour">
+        <item name="android:background">@drawable/screen_style1</item>
+    </style>
 
 </resources>

@@ -4,6 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:layout_margin="10dp"
     tools:context=".GeofenceActivity">
 
     <TextView
@@ -15,12 +16,18 @@
         android:textSize="22sp"
         android:textStyle="bold" />
 
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:text="@string/places_desc"
+        android:textSize="12sp" />
+
     <Button
         android:id="@+id/addPlaces"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="15dp"
-        android:background="@drawable/button_style"
         android:text="@string/addplace"
         android:textAlignment="center" />
 

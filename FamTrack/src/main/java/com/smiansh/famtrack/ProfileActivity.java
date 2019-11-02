@@ -23,7 +23,6 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
@@ -38,6 +37,7 @@ import androidx.core.content.ContextCompat;
 
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -50,12 +50,10 @@ import com.hbb20.CountryCodePicker;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
@@ -68,7 +66,7 @@ public class ProfileActivity extends AppCompatActivity {
     private static final int PHOTO_SELECTION_CODE = 11;
     //    private TextView currUser;
     private EditText firstName, lastName, phone;
-    private Button update, addMember;
+    private MaterialButton update, addMember;
     private ImageView uploadImage;
     private ListView listView;
     CountryCodePicker ccp;
@@ -77,6 +75,7 @@ public class ProfileActivity extends AppCompatActivity {
     private FirebaseFirestore db = FirebaseFirestore.getInstance();
     private String userId;
     private SharedPreferences sp = null;
+    private Helper myHelper;
 
     @Override
     protected void onPostResume() {
@@ -374,6 +373,7 @@ public class ProfileActivity extends AppCompatActivity {
         setContentView(R.layout.activity_profile);
         userId = getIntent().getStringExtra("userId");
 
+        myHelper = new Helper(this);
         firstName = findViewById(R.id.firstName);
         lastName = findViewById(R.id.lastName);
         phone = findViewById(R.id.phone);
@@ -404,26 +404,6 @@ public class ProfileActivity extends AppCompatActivity {
                     PERMISSION_REQUEST);
         }
 
-        try {
-            String path = sp.getString("profileImage", null);
-            try {
-                FileInputStream is;
-                if (path != null) {
-                    is = new FileInputStream(new File(path));
-                    Bitmap myBitmap = BitmapFactory.decodeStream(is);
-                    uploadImage.setImageBitmap(myBitmap);
-                    is.close();
-                } else {
-                    downloadProfileImage();
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                downloadProfileImage();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
         getProfileData();
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -451,7 +431,8 @@ public class ProfileActivity extends AppCompatActivity {
                                 if (nums.length == 2)
                                     phone.setText(nums[1]);
                             }
-//                            currUser.setText(getString(R.string.welcome_text, fName, lName));
+
+                            uploadImage.setImageBitmap(myHelper.getBitmapFromPreferences(sp, fName));
 
                             @SuppressWarnings("unchecked") Map<String, String> membersList =
                                     (Map<String, String>) documentSnapshot.get("family");
@@ -520,7 +501,7 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
 
-    private void downloadProfileImage() {
+    private void downloadProfileImage(final String title) {
         StorageReference storageReference = FirebaseStorage.getInstance().getReference();
         StorageReference profilePicPath = storageReference.child("images/" + userId);
         profilePicPath.getDownloadUrl()
@@ -529,8 +510,8 @@ public class ProfileActivity extends AppCompatActivity {
                     public void onSuccess(Uri uri) {
                         DownloadFilesTask downloadFilesTask = new DownloadFilesTask();
                         try {
-                            downloadFilesTask.execute(new URL(uri.toString()));
-                        } catch (MalformedURLException e) {
+                            downloadFilesTask.execute(uri.toString(), title);
+                        } catch (Exception e) {
                             e.printStackTrace();
                         }
                     }
@@ -554,14 +535,14 @@ public class ProfileActivity extends AppCompatActivity {
 
 
     @SuppressLint("StaticFieldLeak")
-    class DownloadFilesTask extends AsyncTask<URL, Void, Void> {
+    class DownloadFilesTask extends AsyncTask<String, Void, Void> {
 
         @Override
-        protected Void doInBackground(URL... urls) {
+        protected Void doInBackground(String... data) {
             InputStream is = null;
             try {
-                HttpsURLConnection connection = (HttpsURLConnection) new URL(urls[0].toString()).openConnection();
-                Log.i(TAG, urls[0].toString());
+                HttpsURLConnection connection = (HttpsURLConnection) new URL(data[0]).openConnection();
+                Log.i(TAG, data[0]);
                 connection.connect();
                 is = connection.getInputStream();
             } catch (IOException e) {
@@ -585,7 +566,7 @@ public class ProfileActivity extends AppCompatActivity {
                 Uri contentUri = Uri.fromFile(file);
                 mediaScanIntent.setData(contentUri);
                 sendBroadcast(mediaScanIntent);
-                sp.edit().putString("profileImage", file.getAbsolutePath()).apply();
+                sp.edit().putString(data[1] + "_profileImage", file.getAbsolutePath()).apply();
                 os.flush();
                 os.close();
             } catch (Exception e) {

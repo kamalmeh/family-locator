@@ -53,8 +53,10 @@ import java.util.Map;
 public class LoginActivity extends AppCompatActivity implements OnMapReadyCallback {
     private static final String TAG = "Login Activity";
     private static final int RC_SIGN_IN = 1001;
-    private static final int PERMISSION_REQUEST = 10;
+    private static final int PERMISSION_REQUEST1 = 1;
+    private static final int PERMISSION_REQUEST2 = 2;
     private static Marker myMarker;
+    private static MarkerOptions mOpt;
     private Helper myHelper;
     LinearLayout linearLayout;
     SupportMapFragment mapFragment;
@@ -64,6 +66,8 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
     private FirebaseFirestore db = FirebaseFirestore.getInstance();
     private FirebaseAuth mAuth = FirebaseAuth.getInstance();
     private FirebaseUser user = mAuth.getCurrentUser();
+    private PrefManager sp;
+    private String self = "";
     final View.OnClickListener loginClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
@@ -109,34 +113,44 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
         }
     };
     private GoogleMap mMap;
-    View.OnClickListener exitClickListener = new View.OnClickListener() {
-        @Override
-        public void onClick(View view) {
-            finish();
-        }
-    };
+    //    View.OnClickListener exitClickListener = new View.OnClickListener() {
+//        @Override
+//        public void onClick(View view) {
+//            boolean isRatingGiven = sp.pref.getBoolean("isRatingGiven", false);
+//            if(!isRatingGiven)
+//                askForRating();
+//            finish();
+//        }
+//    };
     private Location currentLocation;
     private FirebaseAuth.AuthStateListener authStateListener = new FirebaseAuth.AuthStateListener() {
         @Override
         public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
             int fine_location = ContextCompat.checkSelfPermission(LoginActivity.this, Manifest.permission.ACCESS_FINE_LOCATION);
-            if (fine_location != PackageManager.PERMISSION_GRANTED) {
+            int permission_read = ContextCompat.checkSelfPermission(LoginActivity.this, Manifest.permission.READ_EXTERNAL_STORAGE);
+            int permission_write = ContextCompat.checkSelfPermission(LoginActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            if (fine_location != PackageManager.PERMISSION_GRANTED || permission_read != PackageManager.PERMISSION_GRANTED ||
+                    permission_write != PackageManager.PERMISSION_GRANTED) {
                 String[] permissions;
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     permissions = new String[]{
                             Manifest.permission.ACCESS_FINE_LOCATION,
                             Manifest.permission.ACCESS_COARSE_LOCATION,
+                            Manifest.permission.READ_EXTERNAL_STORAGE,
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE,
                             Manifest.permission.ACTIVITY_RECOGNITION
                     };
                 } else {
                     permissions = new String[]{
                             Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                            Manifest.permission.READ_EXTERNAL_STORAGE,
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE
                     };
                 }
                 ActivityCompat.requestPermissions(LoginActivity.this, permissions,
-                        PERMISSION_REQUEST);
+                        PERMISSION_REQUEST2);
             } else {
 //                if (firebaseAuth.getCurrentUser() != null) {
 //                    user=firebaseAuth.getCurrentUser();
@@ -219,6 +233,7 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+        sp = new PrefManager(this);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -231,7 +246,8 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
         myHelper = new Helper(getApplicationContext());
         login = findViewById(R.id.login);
         exit = findViewById(R.id.exit);
-        exit.setOnClickListener(exitClickListener);
+        exit.setVisibility(View.GONE);
+//        exit.setOnClickListener(exitClickListener);
         panic = findViewById(R.id.panicButton);
         panic.setOnClickListener(panicClickListener);
         panic.setVisibility(View.INVISIBLE);
@@ -272,6 +288,7 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
                         Map<String, Object> data = documentSnapshot.getData();
                         if (data != null) {
                             data.put("status", "Signed In");
+                            data.put("android_version", Build.VERSION.SDK_INT);
                             db.document("/users/" + user.getUid()).set(data, SetOptions.merge())
                                     .addOnSuccessListener(new OnSuccessListener<Void>() {
                                         @Override
@@ -285,6 +302,9 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
                                             login.setEnabled(true);
                                             subscription = new BillingManager(LoginActivity.this).build();
                                             String userType = documentSnapshot.getString("userType");
+                                            self = documentSnapshot.getString("firstName");
+                                            if (myMarker != null)
+                                                myMarker.setIcon(BitmapDescriptorFactory.fromBitmap(myHelper.createCustomMarker(LoginActivity.this, myHelper.getBitmapFromPreferences(myHelper.sharedPreferences, self))));
                                             if (userType != null && userType.equals("test"))
                                                 isTestUser = true;
                                         }
@@ -360,7 +380,7 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
     protected void onPostResume() {
         super.onPostResume();
         login.setOnClickListener(loginClickListener);
-        exit.setOnClickListener(exitClickListener);
+//        exit.setOnClickListener(exitClickListener);
         panic.setOnClickListener(panicClickListener);
         mAuth.addAuthStateListener(authStateListener);
         if (mMap != null)
@@ -378,15 +398,54 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSION_REQUEST) {
+        if (requestCode == PERMISSION_REQUEST1) {
             if (grantResults.length <= 0) {
                 Log.i(TAG, "User interaction was cancelled.");
             } else {
-                if ((grantResults[0] == PackageManager.PERMISSION_GRANTED) && (grantResults[1] == PackageManager.PERMISSION_GRANTED)) {
+                if ((grantResults[0] == PackageManager.PERMISSION_GRANTED) &&
+                        (grantResults[1] == PackageManager.PERMISSION_GRANTED)) {
                     // Permission was granted.
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                         if (grantResults[2] != PackageManager.PERMISSION_GRANTED) {
-                            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACTIVITY_RECOGNITION}, PERMISSION_REQUEST);
+                            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACTIVITY_RECOGNITION}, PERMISSION_REQUEST1);
+                        }
+                    } else {
+                        Log.i(TAG, "Permission was granted");
+                    }
+                } else {
+                    Snackbar.make(
+                            findViewById(R.id.map),
+                            R.string.permission_denied_explanation,
+                            Snackbar.LENGTH_INDEFINITE)
+                            .setAction(R.string.settings, new View.OnClickListener() {
+                                @Override
+                                public void onClick(View view) {
+                                    // Build intent that displays the App settings screen.
+                                    Intent intent = new Intent();
+                                    intent.setAction(
+                                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                                    Uri uri = Uri.fromParts("package",
+                                            BuildConfig.APPLICATION_ID, null);
+                                    intent.setData(uri);
+                                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                    startActivity(intent);
+                                }
+                            })
+                            .show();
+                }
+            }
+        } else if (requestCode == PERMISSION_REQUEST2) {
+            if (grantResults.length <= 0) {
+                Log.i(TAG, "User interaction was cancelled.");
+            } else {
+                if ((grantResults[0] == PackageManager.PERMISSION_GRANTED) &&
+                        (grantResults[1] == PackageManager.PERMISSION_GRANTED) &&
+                        (grantResults[2] == PackageManager.PERMISSION_GRANTED) &&
+                        (grantResults[3] == PackageManager.PERMISSION_GRANTED)) {
+                    // Permission was granted.
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        if (grantResults[4] != PackageManager.PERMISSION_GRANTED) {
+                            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACTIVITY_RECOGNITION}, PERMISSION_REQUEST2);
                         }
                     } else {
                         Log.i(TAG, "Permission was granted");
@@ -417,10 +476,37 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
     }
 
     @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        boolean isRatingGiven = sp.pref.getBoolean("isRatingGiven", false);
+        if (!isRatingGiven)
+            askForRating();
+    }
+
+    private void askForRating() {
+        Intent ratingIntent = new Intent(this, RatingActivity.class);
+        startActivity(ratingIntent);
+        finish();
+    }
+
+    @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
         requestLocation();
         mMap.getUiSettings().setScrollGesturesEnabled(false);
+//        try {
+//            // Customise the styling of the base map using a JSON object defined
+//            // in a raw resource file.
+//            boolean success = googleMap.setMapStyle(
+//                    MapStyleOptions.loadRawResourceStyle(
+//                            this, R.raw.map_style));
+//
+//            if (!success) {
+//                Log.e(TAG, "Style parsing failed.");
+//            }
+//        } catch (Resources.NotFoundException e) {
+//            Log.e(TAG, "Can't find style. Error: ", e);
+//        }
         mMap.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
             @Override
             public void onCameraIdle() {
@@ -449,7 +535,7 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
             }
             ActivityCompat.requestPermissions(this,
                     permissions,
-                    PERMISSION_REQUEST);
+                    PERMISSION_REQUEST1);
         }
         client.requestLocationUpdates(locationRequest, new LocationCallback() {
             @Override
@@ -457,8 +543,8 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
                 super.onLocationResult(locationResult);
                 currentLocation = locationResult.getLastLocation();
                 LatLng latLng = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
-                MarkerOptions mOpt = new MarkerOptions().title("You Are Here").position(latLng);
-                mOpt.icon(BitmapDescriptorFactory.fromBitmap(myHelper.createCustomMarker(LoginActivity.this, myHelper.getBitmap())));
+                mOpt = new MarkerOptions().title(myHelper.getAddressFromLocation(currentLocation)).position(latLng);
+                mOpt.icon(BitmapDescriptorFactory.fromBitmap(myHelper.createCustomMarker(LoginActivity.this, myHelper.getBitmapFromPreferences(myHelper.sharedPreferences, self))));
                 if (myMarker == null) {
                     myMarker = mMap.addMarker(mOpt);
                     mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 13));

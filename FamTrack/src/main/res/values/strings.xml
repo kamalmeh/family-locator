@@ -37,7 +37,7 @@
     <string name="exittext">Exit</string>
     <string name="logintext">Login</string>
     <string name="test">Test</string>
-    <string name="panic">Emergency SMS</string>
+    <string name="panic">Emergency</string>
     <!--<string name="facebook_app_id">397053011014714</string>-->
     <!--<string name="fb_login_protocol_scheme">fb397053011014714</string>-->
     <!-- Facebook application ID and custom URL scheme (app ID prefixed by 'fb'). -->
@@ -79,7 +79,7 @@
     <string name="start">GOT IT</string>
 
     <string name="slide_1_title">Welcome to</string>
-    <string name="slide_1_desc">It is extremely easy to find your family members with Safe Circle.</string>
+    <string name="slide_1_desc">An extremely easy to find your Family, Relatives and Friends.\n\nAfter Login, just update your Profile Details and you are done. Phone is optional.\n\nApplication might not work expected if Profile is not updated.</string>
 
     <string name="slide_2_title">App Install</string>
     <string name="slide_2_desc">Install the App on all devices participating in tracking activity.</string>
@@ -95,10 +95,21 @@
     <string name="image">Image</string>
     <string name="plane">Paper Plane</string>
     <string name="mapview">View All Your Family Members in Map View</string>
-    <string name="add_member_detail_desc">Ask your family member to install the app and provide you the 6 Digit Authentication Code to enter in below</string>
+    <string name="add_member_detail_desc">Ask your family member to install the app and provide you the 6 Digit Authentication Code to enter here</string>
     <string name="enter_the_address">Enter the address</string>
     <string name="enter">Enter</string>
     <string name="location_button">Find My Location</string>
     <string name="address">Modify the Address if you want</string>
     <string name="hide_me_button">Hide Me</string>
+    <string name="ratingText">Did you find the app useful?\n\nGo Ahead and Rate the application on Play Store</string>
+    <string name="submitRating">Submit</string>
+    <string name="app_not_found">Application not found on Play Store</string>
+    <string name="places_desc">These places help if person has left or entered the place. So you keep your family updated if you are at home or at work place or travelling.</string>
+    <string name="invalid_auth_code">Invalid Authentication Code</string>
+    <string name="own_auth_add_error">I see you are adding your own authentication code. You are already there in Map!!!</string>
+    <string name="max_member_error">Maximum Members Allowed: %d</string>
+    <string name="action_settings">Settings</string>
+    <string name="show_me_button">Show Me</string>
+    <string name="my_location">My Location</string>
+    <string name="modify_the_address_if_you_want">Modify the Address if you want</string>
 </resources>

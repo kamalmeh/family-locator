@@ -1,141 +1,130 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/activity_profile"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:layout_margin="10dp"
     android:fontFamily="@string/common_google_play_services_enable_text"
     android:orientation="vertical"
     app:layout_scrollFlags="scroll"
     tools:context=".ProfileActivity">
 
-    <!--<TextView-->
-    <!--android:id="@+id/currUser"-->
-    <!--android:layout_width="match_parent"-->
-    <!--android:layout_height="wrap_content"-->
-    <!--android:textAlignment="center"-->
-    <!--android:textFontWeight="24"-->
-    <!--android:textSize="24sp"-->
-    <!--android:textStyle="bold" />-->
-
-    <de.hdodenhof.circleimageview.CircleImageView
-        android:id="@+id/profileImage"
-        android:layout_width="100dp"
-        android:layout_height="100dp"
-        android:layout_gravity="center"
-        android:src="@drawable/ic_user_silhouette" />
-
-    <TextView
-        android:id="@+id/first"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:fontFamily="@string/common_google_play_services_enable_text"
-        android:text="@string/first_name" />
-
-    <EditText
-        android:id="@+id/firstName"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:autofillHints=""
-        android:fontFamily="@string/common_google_play_services_enable_text"
-        android:hint="@string/first_name"
-        android:inputType="text" />
-
-    <TextView
-        android:id="@+id/last"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:fontFamily="@string/common_google_play_services_enable_text"
-        android:text="@string/last_name" />
-
-    <EditText
-        android:id="@+id/lastName"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:autofillHints=""
-        android:fontFamily="@string/common_google_play_services_enable_text"
-        android:hint="@string/last_name"
-        android:inputType="text" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="0dp"
-        android:orientation="horizontal">
-
-        <TextView
-            android:id="@+id/cntrycode"
-            android:layout_width="50dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="0dp"
-            android:layout_marginTop="10dp"
-            android:fontFamily="@string/common_google_play_services_enable_text"
-            android:text="@string/country" />
-
-        <com.hbb20.CountryCodePicker
-            android:id="@+id/ccp"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="5dp"
-            android:layout_weight="1"
-            android:onClick="onCountryPickerClick"
-            android:paddingStart="10dp"
-            app:ccp_clickable="false"
-            tools:ignore="RtlSymmetry" />
-    </LinearLayout>
-
-    <TextView
-        android:id="@+id/labelPhone"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:fontFamily="@string/common_google_play_services_enable_text"
-        android:text="@string/phone_number" />
-
-    <EditText
-        android:id="@+id/phone"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="0dp"
-        android:autofillHints=""
-        android:fontFamily="@string/common_google_play_services_enable_text"
-        android:hint="@string/phone"
-        android:inputType="phone" />
-
-    <TextView
-        android:id="@+id/textView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:fontFamily="@string/common_google_play_services_enable_text"
-        android:text="@string/members" />
-
-    <ListView
-        android:id="@+id/membersList"
-        android:layout_width="match_parent"
-        android:layout_height="150dp"
-        android:layout_margin="5dp" />
-
-    <LinearLayout
+    <androidx.appcompat.widget.LinearLayoutCompat
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <Button
+        <de.hdodenhof.circleimageview.CircleImageView
+            android:id="@+id/profileImage"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_person_profile_24dp" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <androidx.appcompat.widget.AppCompatEditText
+                android:id="@+id/firstName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/normal"
+                android:fontFamily="@string/common_google_play_services_enable_text"
+                android:hint="@string/first_name"
+                android:importantForAutofill="no"
+                android:inputType="text" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <androidx.appcompat.widget.AppCompatEditText
+                android:id="@+id/lastName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/normal"
+                android:fontFamily="@string/common_google_play_services_enable_text"
+                android:hint="@string/last_name"
+                android:importantForAutofill="no"
+                android:inputType="text" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:id="@+id/cntry"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintTop_toBottomOf="@+id/lastName">
+
+            <com.hbb20.CountryCodePicker
+                android:id="@+id/ccp"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:onClick="onCountryPickerClick"
+                app:ccp_clickable="false"
+                tools:ignore="RtlSymmetry" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <androidx.appcompat.widget.AppCompatEditText
+                    android:id="@+id/phone"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="0dp"
+                    android:background="@color/normal"
+                    android:fontFamily="@string/common_google_play_services_enable_text"
+                    android:hint="@string/phone_number"
+                    android:importantForAutofill="no"
+                    android:inputType="phone" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </androidx.appcompat.widget.LinearLayoutCompat>
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/textView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@string/common_google_play_services_enable_text"
+            android:text="@string/members"
+            app:layout_constraintTop_toBottomOf="@+id/phone" />
+
+        <ListView
+            android:id="@+id/membersList"
+            android:layout_width="match_parent"
+            android:layout_height="300dp"
+            android:layout_margin="5dp" />
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:id="@+id/btnsGrouup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/update"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_margin="5dp"
             android:layout_weight="1"
-            android:background="@drawable/button_style"
             android:text="@string/update" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/addMember"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="5dp"
+            android:layout_margin="5dp"
             android:layout_weight="1"
-            android:background="@drawable/button_style"
             android:text="@string/add_member" />
-    </LinearLayout>
+    </androidx.appcompat.widget.LinearLayoutCompat>
 
-</LinearLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

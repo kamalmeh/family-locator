@@ -17,6 +17,7 @@ import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.location.Address;
 import android.location.Geocoder;
+import android.location.Location;
 import android.net.Uri;
 import android.os.Build;
 import android.os.SystemClock;
@@ -44,6 +45,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -70,6 +72,7 @@ class Helper {
     private boolean isAdsEnabled = false;
     private NotificationManager notificationManager;
     static int NOTIFICATION_SERVICE_ID = 1;
+    SharedPreferences sharedPreferences;
 
     Helper(Context ctx) {
         context = ctx;
@@ -77,8 +80,8 @@ class Helper {
         authColl = db.collection("authcodes");
 
         try {
-            SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
-            setAdsEnabled(sp.getBoolean("adsEnabled", true));
+            sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
+            setAdsEnabled(sharedPreferences.getBoolean("adsEnabled", true));
         } catch (NullPointerException e) {
             e.printStackTrace();
         }
@@ -170,13 +173,33 @@ class Helper {
         return null;
     }
 
+    Bitmap getBitmapFromPreferences(SharedPreferences sharedPreferences, String title) {
+        Bitmap bmp = null;
+        try {
+            String path = sharedPreferences.getString(title + "_profileImage", null);
+            try {
+                FileInputStream is;
+                if (path != null) {
+                    is = new FileInputStream(new File(path));
+                    bmp = BitmapFactory.decodeStream(is);
+                    is.close();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return bmp;
+    }
+
     Bitmap createCustomMarker(Context context, Bitmap bmp) {
 
         View marker = ((LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(R.layout.custom_marker_layout, null);
 
         CircleImageView markerImage = marker.findViewById(R.id.user_dp);
         if (bmp == null)
-            markerImage.setImageResource(R.drawable.ic_user_silhouette);
+            markerImage.setImageResource(R.drawable.ic_person_profile_24dp);
         else
             markerImage.setImageBitmap(bmp);
 
@@ -336,5 +359,23 @@ class Helper {
 
     private void setAdsEnabled(boolean adsEnabled) {
         isAdsEnabled = adsEnabled;
+    }
+
+    String getAddressFromLocation(Location location) {
+        String address = "Address: Not Available";
+        List<Address> addressList;
+        if (location != null) {
+            Geocoder geocoder = new Geocoder(context, Locale.getDefault());
+            try {
+                addressList = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+                if (addressList.size() > 0) {
+                    address = addressList.get(0).getAddressLine(0);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return address;
     }
 }

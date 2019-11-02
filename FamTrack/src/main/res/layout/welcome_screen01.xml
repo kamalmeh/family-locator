@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_screen1">
+    android:background="@drawable/screen_style1">
 
     <LinearLayout
         android:layout_width="wrap_content"
@@ -18,7 +18,7 @@
             android:layout_width="@dimen/img_width_height"
             android:layout_height="@dimen/img_width_height"
             android:contentDescription="@string/image"
-            android:src="@drawable/ic_map_marker_point" />
+            android:src="@drawable/ic_map_marker_point_white" />
 
         <TextView
             android:layout_width="wrap_content"
