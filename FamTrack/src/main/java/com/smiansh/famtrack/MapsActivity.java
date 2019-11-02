@@ -8,6 +8,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -46,6 +47,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -285,6 +287,14 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 intentAddPlace.putExtra("userId", userId);
                 startActivity(intentAddPlace);
                 break;
+            case R.id.help:
+                PrefManager pfMan = new PrefManager(this);
+                pfMan.editor.remove(PrefManager.IS_FIRST_TIME_LAUNCH).apply();
+                pfMan.editor.putBoolean("fromMapView", true).apply();
+                Intent faqIntent = new Intent(this, WelcomeActivity.class);
+                faqIntent.putExtra("userId", userId);
+                startActivity(faqIntent);
+                break;
             case R.id.shareLocation:
                 final DocumentReference docRef = db.collection("users").document(userId);
                 docRef.get()
@@ -383,6 +393,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 //            try {
 //                MobileAds.initialize(this, getString(R.string.ads));
 //                AdView mAdView = findViewById(R.id.adView);
+////                mAdView.setVisibility(View.VISIBLE);
 //                AdRequest adRequest = new AdRequest.Builder().build();
 //                mAdView.loadAd(adRequest);
 //            } catch (Exception e) {
@@ -409,6 +420,20 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
+
+        try {
+            // Customise the styling of the base map using a JSON object defined
+            // in a raw resource file.
+            boolean success = googleMap.setMapStyle(
+                    MapStyleOptions.loadRawResourceStyle(
+                            this, R.raw.map_style));
+
+            if (!success) {
+                Log.e(TAG, "Style parsing failed.");
+            }
+        } catch (Resources.NotFoundException e) {
+            Log.e(TAG, "Can't find style. Error: ", e);
+        }
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED && (ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED)
@@ -440,6 +465,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             @Override
             public void onCameraMoveStarted(int i) {
                 recenter.setVisibility(View.VISIBLE);
+                boundLatLong = false;
             }
         });
         mMap.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {

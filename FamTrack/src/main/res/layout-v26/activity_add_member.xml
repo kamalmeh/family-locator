@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:layout_margin="10dp"
     tools:context=".AddMemberActivity">
 
     <LinearLayout
@@ -41,6 +42,7 @@
             android:autofillHints="yes"
             android:hint="@string/authcode_hint"
             android:inputType="text"
+            android:textAlignment="center"
             ads:layout_constraintBottom_toTopOf="@+id/addButton"
             tools:layout_editor_absoluteX="0dp" />
 

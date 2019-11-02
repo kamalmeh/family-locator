@@ -34,10 +34,8 @@ import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -49,7 +47,6 @@ import com.google.firebase.firestore.SetOptions;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -70,13 +67,14 @@ public class TrackingService extends Service {
     private Helper myHelper;
     private Double lastLocationLat = 0.0;
     private Double lastLocationLong = 0.0;
-    private long requestInterval = 60000;
-    private String activity = "Stationary";
+    private static String activity = "Stationary";
+    private String lastActivity = "Stationary";
+    private long requestInterval = 600000;
     private NotificationManager notificationManager;
     private GeofencingClient geofencingClient;
     private List<Geofence> geofenceList = null;
     private PendingIntent geofencePendingIntent;
-    private Task<Void> geoFencingTask;
+    //    private Task<Void> geoFencingTask;
     private FirebaseFirestore db = FirebaseFirestore.getInstance();
 
     public TrackingService() {
@@ -86,17 +84,37 @@ public class TrackingService extends Service {
             public void onLocationResult(LocationResult locationResult) {
                 super.onLocationResult(locationResult);
                 if (locationResult != null) {
-                    Location location = locationResult.getLastLocation();
-                    if ((location.getLatitude() != lastLocationLat) || (location.getLongitude() != lastLocationLong)) {
-                        Log.i(TAG, "Location: " + location.getLatitude() + "," + location.getLongitude());
+                    Location curr_location = locationResult.getLastLocation();
+                    Location last_location = new Location("");
+                    last_location.setLatitude(lastLocationLat);
+                    last_location.setLongitude(lastLocationLong);
+//                  check if distance is greate than 10 meters, if yes, update it to database
+                    float distance = last_location.distanceTo(curr_location);
+                    if (distance > 5) {
+                        Log.i(TAG, "Distance Travelled:" + distance);
                         SharedPreferences.Editor editor = sp.edit();
-                        editor.putString("lastLocationTime", sd.format(location.getTime()));
-                        editor.putString("Latitude", String.valueOf(location.getLatitude()));
-                        editor.putString("Longitude", String.valueOf(location.getLongitude()));
+                        editor.putString("lastLocationTime", sd.format(curr_location.getTime()));
+                        editor.putString("Latitude", String.valueOf(curr_location.getLatitude()));
+                        editor.putString("Longitude", String.valueOf(curr_location.getLongitude()));
+                        editor.putString("lastActivity", activity);
                         editor.apply();
-                        updateToDatabase(location);
+                        updateToDatabase(curr_location);
+                        lastLocationLat = Double.parseDouble(sp.getString("Latitude", "1"));
+                        lastLocationLong = Double.parseDouble(sp.getString("Longitude", "1"));
+                        lastActivity = sp.getString("lastActivity", "Stationary");
                     } else {
-                        Log.i(TAG, location.getLatitude() + " = " + lastLocationLat + "," + location.getLongitude() + " = " + lastLocationLong);
+                        Log.i(TAG, "Distance Travelled:" + distance);
+                        lastActivity = sp.getString("lastActivity", "Stationary").trim();
+                        if (activity.equals("Stationary") && !activity.equals(lastActivity)) {
+                            Log.i(TAG, "Stopping as activity is 'Stationary'");
+                            SharedPreferences.Editor editor = sp.edit();
+                            editor.putString("lastActivity", activity);
+                            editor.apply();
+                            updateToDatabase(curr_location);
+                            stopSelf();
+                        } else if (activity.equals("Stationary")) {
+                            stopSelf();
+                        }
                     }
                 }
             }
@@ -115,6 +133,9 @@ public class TrackingService extends Service {
         try {
             requestInterval = intent.getLongExtra("requestInterval", 600000);
             activity = intent.getStringExtra("activity");
+            if (activity != null) {
+                activity = activity.trim();
+            }
             startForeground(Helper.NOTIFICATION_SERVICE_ID, myHelper.getNotification(activity));
         } catch (NullPointerException e) {
             e.printStackTrace();
@@ -143,12 +164,26 @@ public class TrackingService extends Service {
         if (user != null) {
             Log.i(TAG, "Location updated for current user: " + userId);
             final GeoPoint geoPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
-            FirebaseFirestore db = FirebaseFirestore.getInstance();
-            DocumentReference documentReference = db.collection("users").document(userId);
-            Map<String, Object> data = new HashMap<>();
-            data.put("location", geoPoint);
-            data.put("location_timestamp", sd.format(new Date()));
-            documentReference.set(data, SetOptions.merge());
+            final FirebaseFirestore db = FirebaseFirestore.getInstance();
+            db.collection("users").document(userId).get()
+                    .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                        @Override
+                        public void onSuccess(DocumentSnapshot documentSnapshot) {
+                            Map<String, Object> data = documentSnapshot.getData();
+                            if (data != null) {
+                                data.put("location", geoPoint);
+                                data.put("location_timestamp", sd.format(new Date()));
+                                data.put("last_activity", activity);
+                                db.collection("users").document(userId).set(data, SetOptions.merge());
+                            }
+                        }
+                    })
+                    .addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            e.printStackTrace();
+                        }
+                    });
         }
     }
 
@@ -229,6 +264,7 @@ public class TrackingService extends Service {
         try {
             lastLocationLat = Double.parseDouble(sp.getString("Latitude", "1"));
             lastLocationLong = Double.parseDouble(sp.getString("Longitude", "1"));
+            lastActivity = sp.getString("lastActivity", "Stationary");
         } catch (NullPointerException e) {
             e.printStackTrace();
         }

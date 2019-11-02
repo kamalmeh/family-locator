@@ -1,23 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <group android:id="@+id/account">
-        <item
-            android:id="@+id/updateProfile"
-            android:title="Update Profile" />
-        <item
-            android:id="@+id/renew"
-            android:title="Renew/Upgrade" />
-    </group>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
-        android:id="@+id/addMember"
-        android:title="Add Member" />
-    <item
-        android:id="@+id/shareLocation"
-        android:title="Share my Location" />
-    <item
-        android:id="@+id/addPlaces"
-        android:title="Add New Place" />
-    <item
-        android:id="@+id/signout"
-        android:title="SignOut" />
+        android:icon="@drawable/ic_menu"
+        android:title="menu"
+        app:showAsAction="always">
+        <menu>
+            <item
+                android:id="@+id/updateProfile"
+                android:title="Update Profile" />
+            <item
+                android:id="@+id/renew"
+                android:title="Renew/Upgrade" />
+            <item
+                android:id="@+id/addMember"
+                android:title="Add Member" />
+            <item
+                android:id="@+id/shareLocation"
+                android:title="Share my Location" />
+            <item
+                android:id="@+id/addPlaces"
+                android:title="Add New Place" />
+            <item
+                android:id="@+id/help"
+                android:title="App Info" />
+            <item
+                android:id="@+id/signout"
+                android:title="SignOut" />
+        </menu>
+    </item>
 </menu>

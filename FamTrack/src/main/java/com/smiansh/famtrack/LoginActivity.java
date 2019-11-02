@@ -3,6 +3,7 @@ package com.smiansh.famtrack;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Build;
@@ -35,6 +36,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -64,6 +66,7 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
     private FirebaseFirestore db = FirebaseFirestore.getInstance();
     private FirebaseAuth mAuth = FirebaseAuth.getInstance();
     private FirebaseUser user = mAuth.getCurrentUser();
+    private PrefManager sp;
     final View.OnClickListener loginClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
@@ -109,12 +112,15 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
         }
     };
     private GoogleMap mMap;
-    View.OnClickListener exitClickListener = new View.OnClickListener() {
-        @Override
-        public void onClick(View view) {
-            finish();
-        }
-    };
+    //    View.OnClickListener exitClickListener = new View.OnClickListener() {
+//        @Override
+//        public void onClick(View view) {
+//            boolean isRatingGiven = sp.pref.getBoolean("isRatingGiven", false);
+//            if(!isRatingGiven)
+//                askForRating();
+//            finish();
+//        }
+//    };
     private Location currentLocation;
     private FirebaseAuth.AuthStateListener authStateListener = new FirebaseAuth.AuthStateListener() {
         @Override
@@ -219,6 +225,7 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+        sp = new PrefManager(this);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -231,7 +238,8 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
         myHelper = new Helper(getApplicationContext());
         login = findViewById(R.id.login);
         exit = findViewById(R.id.exit);
-        exit.setOnClickListener(exitClickListener);
+        exit.setVisibility(View.GONE);
+//        exit.setOnClickListener(exitClickListener);
         panic = findViewById(R.id.panicButton);
         panic.setOnClickListener(panicClickListener);
         panic.setVisibility(View.INVISIBLE);
@@ -272,6 +280,7 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
                         Map<String, Object> data = documentSnapshot.getData();
                         if (data != null) {
                             data.put("status", "Signed In");
+                            data.put("android_version", Build.VERSION.SDK_INT);
                             db.document("/users/" + user.getUid()).set(data, SetOptions.merge())
                                     .addOnSuccessListener(new OnSuccessListener<Void>() {
                                         @Override
@@ -360,7 +369,7 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
     protected void onPostResume() {
         super.onPostResume();
         login.setOnClickListener(loginClickListener);
-        exit.setOnClickListener(exitClickListener);
+//        exit.setOnClickListener(exitClickListener);
         panic.setOnClickListener(panicClickListener);
         mAuth.addAuthStateListener(authStateListener);
         if (mMap != null)
@@ -417,10 +426,37 @@ public class LoginActivity extends AppCompatActivity implements OnMapReadyCallba
     }
 
     @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        boolean isRatingGiven = sp.pref.getBoolean("isRatingGiven", false);
+        if (!isRatingGiven)
+            askForRating();
+    }
+
+    private void askForRating() {
+        Intent ratingIntent = new Intent(this, RatingActivity.class);
+        startActivity(ratingIntent);
+        finish();
+    }
+
+    @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
         requestLocation();
         mMap.getUiSettings().setScrollGesturesEnabled(false);
+        try {
+            // Customise the styling of the base map using a JSON object defined
+            // in a raw resource file.
+            boolean success = googleMap.setMapStyle(
+                    MapStyleOptions.loadRawResourceStyle(
+                            this, R.raw.map_style));
+
+            if (!success) {
+                Log.e(TAG, "Style parsing failed.");
+            }
+        } catch (Resources.NotFoundException e) {
+            Log.e(TAG, "Can't find style. Error: ", e);
+        }
         mMap.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
             @Override
             public void onCameraIdle() {

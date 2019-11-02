@@ -2,6 +2,8 @@ package com.smiansh.famtrack;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
@@ -15,11 +17,11 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.FragmentActivity;
 import androidx.viewpager.widget.PagerAdapter;
 import androidx.viewpager.widget.ViewPager;
 
-public class WelcomeActivity extends AppCompatActivity {
+public class WelcomeActivity extends FragmentActivity {
 
     private ViewPager viewPager;
     private MyViewPagerAdapter myViewPagerAdapter;
@@ -64,6 +66,7 @@ public class WelcomeActivity extends AppCompatActivity {
 
         // Checking for first time launch - before calling setContentView()
         prefManager = new PrefManager(this);
+        runUpdatesIfNecessary();
         if (!prefManager.isFirstTimeLaunch()) {
             launchHomeScreen();
             finish();
@@ -123,6 +126,28 @@ public class WelcomeActivity extends AppCompatActivity {
         });
     }
 
+    private void runUpdatesIfNecessary() {
+        int versionCode = 0;
+        try {
+            versionCode = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        if (prefManager.pref.getInt("lastUpdate", 0) != versionCode) {
+            try {
+                prefManager.resetFirstTimeLaunch();
+
+                // Commiting in the preferences, that the update was successful.
+                SharedPreferences.Editor editor = prefManager.pref.edit();
+                editor.putInt("lastUpdate", versionCode);
+                editor.apply();
+            } catch (Throwable t) {
+                // update failed, or cancelled
+            }
+        }
+    }
+
     private void addBottomDots(int currentPage) {
         dots = new TextView[layouts.length];
 
@@ -148,7 +173,11 @@ public class WelcomeActivity extends AppCompatActivity {
 
     private void launchHomeScreen() {
         prefManager.setFirstTimeLaunch(false);
-        startActivity(new Intent(WelcomeActivity.this, LoginActivity.class));
+        boolean isFromMapView = prefManager.pref.getBoolean("fromMapView", false);
+        if (isFromMapView)
+            prefManager.editor.remove("fromMapView").apply();
+        else
+            startActivity(new Intent(WelcomeActivity.this, LoginActivity.class));
         finish();
     }
 

@@ -8,6 +8,7 @@
     android:fontFamily="@string/common_google_play_services_enable_text"
     android:orientation="vertical"
     app:layout_scrollFlags="scroll"
+    android:layout_margin="10dp"
     tools:context=".ProfileActivity">
 
     <!--<TextView-->
@@ -132,22 +133,23 @@
         android:id="@+id/btnsGrouup"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@+id/membersList"
-        android:orientation="vertical">
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent">
 
         <Button
             android:id="@+id/update"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            style="?android:attr/borderlessButtonStyle"
             android:background="@drawable/button_style"
             android:text="@string/update" />
 
         <Button
             android:id="@+id/addMember"
-            android:layout_marginTop="5dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            style="?android:attr/borderlessButtonStyle"
             android:background="@drawable/button_style"
             android:layout_weight="1"
             android:text="@string/add_member" />

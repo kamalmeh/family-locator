@@ -3,13 +3,11 @@ package com.smiansh.famtrack;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-/**
- * Created by Lincoln on 05/05/16.
- */
 public class PrefManager {
     // Shared preferences file name
-    private static final String PREF_NAME = "safecircle-welcome";
-    private static final String IS_FIRST_TIME_LAUNCH = "IsFirstTimeLaunch";
+    public static final String PREF_NAME = "safecircle-welcome";
+    public static final String IS_FIRST_TIME_LAUNCH = "IsFirstTimeLaunch";
+    public static final String IS_RATING_GIVEN = "isRatingGiven";
     SharedPreferences pref;
     SharedPreferences.Editor editor;
     Context _context;
@@ -20,6 +18,12 @@ public class PrefManager {
         this._context = context;
         pref = _context.getSharedPreferences(PREF_NAME, PRIVATE_MODE);
         editor = pref.edit();
+        editor.apply();
+    }
+
+    public void resetFirstTimeLaunch() {
+        editor.remove(IS_FIRST_TIME_LAUNCH).apply();
+        editor.remove(IS_RATING_GIVEN).apply();
     }
 
     public boolean isFirstTimeLaunch() {
