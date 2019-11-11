@@ -2,33 +2,25 @@ package com.smiansh.famtrack;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.Activity;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.location.Address;
-import android.location.Geocoder;
+import android.location.Location;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.preference.PreferenceManager;
 import android.provider.Settings;
-import android.util.DisplayMetrics;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -87,10 +79,9 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
+import java.util.TreeMap;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.HttpsURLConnection;
@@ -99,7 +90,7 @@ import de.hdodenhof.circleimageview.CircleImageView;
 
 import static com.smiansh.famtrack.LoginActivity.isTestUser;
 
-public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback, SharedPreferences.OnSharedPreferenceChangeListener {
+public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback {
     private static final String TAG = "MAPS_ACTIVITY";
     private static final int PERMISSION_REQUEST = 10;
     private GoogleMap mMap;
@@ -107,11 +98,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             "ABCDEFGHJKLMNOPQRSTUVWXYZ" + "abcdefghijkmnopqrstuvwxyz";
     public static String self;
     public static Marker selfMarker;
-    private static boolean boundLatLong = false;
+    PrefManager prefManager;
     private String userId;
     private static boolean hideMyLocation = false;
     public HashMap<String, Marker> mMarkers = new HashMap<>();
     private MarkerOptions mOpt = null;
+    private boolean boundLatLong = false;
     SharedPreferences sharedPreferences;
     private Bitmap bmp = null;
     private Helper myHelper;
@@ -126,7 +118,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     View.OnClickListener recenterClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
-            boundLatLong = true;
+            if (!boundLatLong)
+                boundLatLong = true;
             if (mMarkers.size() == 0) {
                 mMarkers.put(self, selfMarker);
             }
@@ -157,7 +150,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private NavigationView.OnNavigationItemSelectedListener navigationItemSelectedListener = new NavigationView.OnNavigationItemSelectedListener() {
         @Override
         public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-            item.setChecked(true);
             switch (item.getItemId()) {
                 case R.id.renew:
                     subscription.launchBillingWorkflow();
@@ -310,7 +302,15 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 Marker marker = (Marker) entry.getValue();
                 if (marker != null) {
                     builder.include(marker.getPosition());
-                    InfoWindowData info = createCustomInfoWindow(getGeoAddress(new GeoPoint(marker.getPosition().latitude, marker.getPosition().longitude), userStatuss.get(entry.getKey().toString())));
+                    Location location = new Location(LocationManager.GPS_PROVIDER);
+                    location.setLongitude(marker.getPosition().longitude);
+                    location.setLatitude(marker.getPosition().latitude);
+//                    InfoWindowData info = createCustomInfoWindow(getGeoAddress(new GeoPoint(marker.getPosition().latitude, marker.getPosition().longitude), userStatuss.get(entry.getKey().toString())));
+                    InfoWindowData info = myHelper.createCustomInfoWindow(
+                            mMap,
+                            prepateGeoAddress(myHelper.getAddressFromLocation(location), userStatuss.get(entry.getKey().toString())),
+                            getApplicationContext()
+                    );
                     marker.setTag(info);
                     marker.setVisible(true);
                     marker.hideInfoWindow();
@@ -318,34 +318,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
             if (mMarkers.size() > 1)
                 hide.setVisibility(View.VISIBLE);
+            mMap.resetMinMaxZoomPreference();
             mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 150));
         }
         recenter.setVisibility(View.GONE);
         boundLatLong = false;
-    }
-
-    public Bitmap createCustomMarker(Context context, Bitmap localBitmap) {
-
-        View marker = ((LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(R.layout.custom_marker_layout, null);
-
-        CircleImageView markerImage = marker.findViewById(R.id.user_dp);
-        if (localBitmap == null)
-            markerImage.setImageResource(R.drawable.ic_person_profile_24dp);
-        else
-            markerImage.setImageBitmap(localBitmap);
-
-        DisplayMetrics displayMetrics = new DisplayMetrics();
-        ((Activity) context).getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
-        marker.setLayoutParams(new ViewGroup.LayoutParams(52, ViewGroup.LayoutParams.WRAP_CONTENT));
-        marker.measure(displayMetrics.widthPixels, displayMetrics.heightPixels);
-        marker.layout(0, 0, displayMetrics.widthPixels, displayMetrics.heightPixels);
-        marker.buildDrawingCache();
-        Bitmap bitmap = Bitmap.createBitmap(marker.getMeasuredWidth(), marker.getMeasuredHeight(), Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(bitmap);
-        marker.draw(canvas);
-        bmp = null;
-
-        return bitmap;
     }
 
     protected void initialize() {
@@ -374,7 +351,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         recenter.setOnClickListener(recenterClickListener);
         hide.setOnClickListener(hideClickListener);
         addPerson.setOnClickListener(addPersonClickListener);
-        sharedPreferences.registerOnSharedPreferenceChangeListener(this);
     }
 
     @Override
@@ -383,8 +359,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         hideMyLocation = false;
         hide.setIcon(getDrawable(R.drawable.ic_visibility_on_24dp));
         subscription.refreshPurchases();
-        licencedProduct = subscription.getMyPurchases().size() > 0;
         navigationView.setNavigationItemSelectedListener(navigationItemSelectedListener);
+        MenuItem selectedItem = navigationView.getCheckedItem();
+        if (selectedItem != null) {
+            selectedItem.setChecked(false);
+        }
     }
 
     @Override
@@ -425,10 +404,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-        sharedPreferences.registerOnSharedPreferenceChangeListener(this);
+        prefManager = new PrefManager(getApplicationContext());
+        sharedPreferences = prefManager.getApplicationDefaultSharedPreferences();
         subscription = new BillingManager(this).build();
-        licencedProduct = subscription.getMyPurchases().size() > 0;
+        licencedProduct = sharedPreferences.getBoolean("isLicenced", false);
         myHelper = new Helper(this);
         myHelper.setCurrUser(user);
         myHelper.createAlarm(60000);
@@ -452,7 +431,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             supportActionBar.setDisplayHomeAsUpEnabled(true);
         }
 
-        navigationView.setNavigationItemSelectedListener(navigationItemSelectedListener);
+        try {
+            navigationView.setNavigationItemSelectedListener(navigationItemSelectedListener);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         if (!licencedProduct || isTestUser) {
             try {
@@ -520,7 +503,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
             @Override
             public boolean onMarkerClick(Marker marker) {
-//                Toast.makeText(MapsActivity.this, marker.getTitle() + " clicked", Toast.LENGTH_SHORT).show();
                 boundLatLong = false;
                 return false;
             }
@@ -718,25 +700,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    String getGeoAddress(GeoPoint location, String userStatus) {
-        String address = "Address: Not Available";
-        List<Address> addressList;
-        if (location != null) {
-            Geocoder geocoder = new Geocoder(this, Locale.getDefault());
-            try {
-                addressList = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
-                if (addressList.size() > 0) {
-                    address = addressList.get(0).getAddressLine(0);
-                    if (userStatus != null)
-                        address = address.concat("\n\nLogged In Status: " + userStatus);
-                    else address = address.concat("\n\nLogged In Status: Unknown");
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+    String prepateGeoAddress(String address, String userStatus) {
+        String addr;
+        if (userStatus != null)
+            addr = address.concat("\n\nLogged In Status: " + userStatus);
+        else addr = address.concat("\n\nLogged In Status: Unknown");
 
-        return address;
+        return addr;
     }
 
     private void setMarker(DocumentSnapshot dataSnapshot) {
@@ -745,13 +715,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         String uid = dataSnapshot.getId();
         String status = dataSnapshot.getString("status");
         userStatuss.put(title, status);
-        LatLng location = null;
+        LatLng latLng = null;
         if (geoPoint != null) {
-            location = new LatLng(geoPoint.getLatitude(), geoPoint.getLongitude());
+            latLng = new LatLng(geoPoint.getLatitude(), geoPoint.getLongitude());
         }
-        if (location != null) {
+        if (latLng != null) {
             if (!mMarkers.containsKey(title)) {
-                mOpt = new MarkerOptions().title(title).position(location);
+                mOpt = new MarkerOptions().title(title).position(latLng);
 //                downloadProfileImage(uid, title);
                 try {
                     String path = sharedPreferences.getString(title + "_profileImage", null);
@@ -763,35 +733,46 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                             is.close();
                         } else {
                             Log.i(TAG, "Downloading Image - 01" + uid + "/" + title);
-                            downloadProfileImage(uid, title);
+                            downloadProfileImage(uid, title, status);
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
                         Log.i(TAG, "Downloading Image - 02");
-                        downloadProfileImage(uid, title);
+                        downloadProfileImage(uid, title, status);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-                mOpt.icon(BitmapDescriptorFactory.fromBitmap(createCustomMarker(MapsActivity.this, bmp)));
+                mOpt.icon(BitmapDescriptorFactory.fromBitmap(myHelper.createCustomMarker(MapsActivity.this, R.layout.custom_marker_layout, bmp)));
+//Required to reset the bmp null to avoid loading login user picture to members' markers.
+                bmp = null;
                 Marker newMarker = mMap.addMarker(mOpt);
-                InfoWindowData info = createCustomInfoWindow(getGeoAddress(new GeoPoint(newMarker.getPosition().latitude, newMarker.getPosition().longitude), status));
+                Location location = new Location(LocationManager.GPS_PROVIDER);
+                location.setLatitude(newMarker.getPosition().latitude);
+                location.setLongitude(newMarker.getPosition().longitude);
+                InfoWindowData info = myHelper.createCustomInfoWindow(
+                        mMap,
+                        prepateGeoAddress(myHelper.getAddressFromLocation(location), status),
+                        getApplicationContext()
+                );
                 newMarker.setTag(info);
                 mMarkers.put(title, newMarker);
                 if (self.equals(title)) {
                     selfMarker = newMarker;
                 }
             } else {
-                Objects.requireNonNull(mMarkers.get(title)).setPosition(location);
-                Objects.requireNonNull(mMarkers.get(title)).setVisible(true);
-                //downloadProfileImage(uid, title);
+                Marker marker = mMarkers.get(title);
+                if (marker != null) {
+                    marker.setPosition(latLng);
+                    marker.setVisible(true);
+                }
             }
 
             setLatLongBound();
         }
     }
 
-    private void downloadProfileImage(String uid, final String title) {
+    private void downloadProfileImage(String uid, final String title, final String userStatus) {
         StorageReference profilePicRef = FirebaseStorage.getInstance().getReference();
         StorageReference profilePicPath = profilePicRef.child("images/" + uid);
         profilePicPath.getDownloadUrl()
@@ -799,7 +780,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     @Override
                     public void onSuccess(Uri uri) {
                         try {
-                            MarkerParams mParam = new MarkerParams(title, new URL(uri.toString()));
+                            MarkerParams mParam = new MarkerParams(title, userStatus, new URL(uri.toString()));
                             DownloadFilesTask downloadFilesTask = new DownloadFilesTask();
                             downloadFilesTask.execute(mParam);
                         } catch (MalformedURLException e) {
@@ -829,7 +810,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 //noinspection unchecked
                                 final Map<String, Object> family = (Map<String, Object>) documentSnapshot.get("family");
                                 if (family != null) {
-                                    for (Map.Entry row : family.entrySet()) {
+                                    TreeMap<String, Object> sortedFamily = new TreeMap<>(family);
+                                    for (Map.Entry row : sortedFamily.entrySet()) {
                                         DocumentReference localDocRef = db.document(row.getValue().toString());
                                         localDocRef.get()
                                                 .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
@@ -881,97 +863,16 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    @Override
-    public void onSharedPreferenceChanged(SharedPreferences sp, String key) {
-//        if (key.contains("isSkuDetailsRetrieved")){
-//        boolean isSkuDetailsRetrieved = sp.getBoolean("isSkuDetailsRetrieved", false);
-//        if (isSkuDetailsRetrieved) {
-//            sharedPreferences.edit().putBoolean("isSkuDetailsRetrieved", false).apply();
-//            final List<Purchase> myPurchases = subscription.getMyPurchases();
-//            if (myPurchases != null) {
-//                if (myPurchases.size() <= 0) {
-//                    hide.setVisibility(View.GONE);
-//                    if (mMap != null) {
-//                        if (mMarkers != null) {
-//                            mMap.clear();
-//                            mMarkers.clear();
-//                            DocumentReference docRef = db.collection("users").document(userId);
-//                            docRef.get()
-//                                    .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
-//                                        @Override
-//                                        public void onSuccess(DocumentSnapshot documentSnapshot) {
-//                                            if (documentSnapshot != null) {
-//                                                self = documentSnapshot.getString("firstName");
-//                                                String status = documentSnapshot.getString("status");
-//                                                GeoPoint geoPoint = documentSnapshot.getGeoPoint("location");
-//                                                if (status != null)
-//                                                    userStatuss.put(self, status);
-//                                                else userStatuss.put(self, "Unknown");
-//                                                if (!hideMyLocation)
-//                                                    setMarker(documentSnapshot);
-//                                                if (geoPoint != null)
-//                                                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(geoPoint.getLatitude(), geoPoint.getLongitude()), 15));
-//                                                else {
-//                                                    AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivity.this);
-//                                                    builder.setMessage(getString(R.string.location_availibility))
-//                                                            .setTitle("Location Availability Check")
-//                                                            .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-//                                                                @Override
-//                                                                public void onClick(DialogInterface dialog, int which) {
-//                                                                    Log.i(TAG, "Starting forground process");
-//                                                                    Intent trackingService = new Intent(MapsActivity.this, TrackingService.class);
-//                                                                    trackingService.putExtra("requestInterval", 60000);
-//                                                                    trackingService.putExtra("activity", "Stationary");
-//                                                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//                                                                        startForegroundService(trackingService);
-//                                                                    } else {
-//                                                                        startService(trackingService);
-//                                                                    }
-//                                                                    dialog.dismiss();
-//                                                                }
-//                                                            })
-//                                                            .create()
-//                                                            .show();
-////                                        Toast.makeText(MapsActivity.this, "No Location Available for your device as of now. Please wait for the location update.", Toast.LENGTH_LONG).show();
-//                                                }
-//                                            }
-//                                        }
-//                                    })
-//                                    .addOnFailureListener(new OnFailureListener() {
-//                                        @Override
-//                                        public void onFailure(@NonNull Exception e) {
-//                                            e.printStackTrace();
-//                                        }
-//                                    });
-//                        }
-//                    }
-//                } else {
-//                    locateFamily();
-//                    subscribeToLocations();
-//                    hide.setVisibility(View.VISIBLE);
-//                    setLatLongBound();
-//                }
-//            }
-//        }
-//        }
-    }
-
     class MarkerParams {
         String title;
+        String userStatus;
         URL url;
 
-        MarkerParams(String m, URL u) {
+        MarkerParams(String m, String status, URL u) {
             title = m;
+            userStatus = status;
             url = u;
         }
-    }
-
-    InfoWindowData createCustomInfoWindow(String address) {
-        InfoWindowData info = new InfoWindowData();
-        info.setAddress(address + "\nClick Me to get Direction");
-        CustomInfoWindowGoogleMap customInfoWindow = new CustomInfoWindowGoogleMap(this);
-        mMap.setInfoWindowAdapter(customInfoWindow);
-        return info;
     }
 
     @SuppressLint("StaticFieldLeak")
@@ -980,6 +881,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         @Override
         protected Void doInBackground(MarkerParams... markerParams) {
             final String title = markerParams[0].title;
+            final String status = markerParams[0].userStatus;
 
             InputStream is = null;
             try {
@@ -1020,19 +922,17 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     @Override
                     public void run() {
                         mOpt = new MarkerOptions().title(title).position(m.getPosition());
-                        String address = "Address";
-                        List<Address> addressList;
-                        Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
-                        try {
-                            addressList = geocoder.getFromLocation(m.getPosition().latitude, m.getPosition().longitude, 1);
-                            if (addressList.size() > 0) {
-                                address = addressList.get(0).getAddressLine(0);
-                            }
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                        InfoWindowData info = createCustomInfoWindow(address);
-                        mOpt.icon(BitmapDescriptorFactory.fromBitmap(createCustomMarker(MapsActivity.this, bitmap)));
+                        Location location = new Location(LocationManager.GPS_PROVIDER);
+                        location.setLongitude(m.getPosition().longitude);
+                        location.setLatitude(m.getPosition().latitude);
+                        InfoWindowData info = myHelper.createCustomInfoWindow(
+                                mMap,
+                                prepateGeoAddress(myHelper.getAddressFromLocation(location), status),
+                                getApplicationContext()
+                        );
+                        mOpt.icon(BitmapDescriptorFactory.fromBitmap(myHelper.createCustomMarker(MapsActivity.this, R.layout.custom_marker_layout, bitmap)));
+//Required to reset the bmp null to avoid loading login user picture to members' markers.
+                        bmp = null;
                         Marker newMarker = mMap.addMarker(mOpt);
                         newMarker.setTag(info);
                         mMarkers.put(title, newMarker);
@@ -1041,39 +941,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 });
             }
             return null;
-        }
-    }
-
-    class CustomInfoWindowGoogleMap implements GoogleMap.InfoWindowAdapter {
-
-        private Context context;
-
-        CustomInfoWindowGoogleMap(Context ctx) {
-            context = ctx;
-        }
-
-        @Override
-        public View getInfoWindow(Marker marker) {
-            return null;
-        }
-
-        @Override
-        public View getInfoContents(Marker marker) {
-            View view = ((Activity) context).getLayoutInflater()
-                    .inflate(R.layout.map_custom_infowindow, null);
-
-            TextView name_tv = view.findViewById(R.id.name);
-            TextView address = view.findViewById(R.id.address);
-
-            name_tv.setText(marker.getTitle());
-
-            InfoWindowData infoWindowData = (InfoWindowData) marker.getTag();
-
-            if (infoWindowData != null) {
-                address.setText(infoWindowData.getAddress());
-            }
-
-            return view;
         }
     }
 }

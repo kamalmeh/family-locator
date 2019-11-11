@@ -20,28 +20,64 @@
         map:layout_constraintTop_toTopOf="parent"
         tools:context=".LoginActivity" />
 
-    <!--<LinearLayout-->
-    <!--android:id="@+id/label"-->
-    <!--android:layout_width="399dp"-->
-    <!--android:layout_height="280dp"-->
-    <!--android:orientation="vertical"-->
-    <!--tools:layout_editor_absoluteX="6dp"-->
-    <!--tools:layout_editor_absoluteY="37dp">-->
+    <!--    <androidx.appcompat.widget.LinearLayoutCompat-->
+    <!--        android:id="@+id/search_area"-->
+    <!--        android:layout_width="match_parent"-->
+    <!--        android:layout_height="wrap_content"-->
+    <!--        android:layout_margin="15dp"-->
+    <!--        android:orientation="horizontal"-->
+    <!--        android:gravity="end"-->
+    <!--        app:layout_constraintTop_toTopOf="parent">-->
 
-    <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/greeting"
-        android:layout_width="match_parent"
-        android:layout_height="100sp"
-        android:layout_below="@+id/map"
-        android:drawableBottom="@drawable/ic_map_marker_point"
-        android:text="@string/welcome_text"
-        android:textAlignment="center"
-        app:autoSizeTextType="uniform"
-        app:layout_constraintBottom_toTopOf="@+id/buttonGroup"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.163"
-        tools:layout_editor_absoluteX="8dp" />
-    <!--</LinearLayout>-->
+    <!--        <fragment-->
+    <!--            android:id="@+id/autocomplete_fragment"-->
+    <!--            android:layout_width="match_parent"-->
+    <!--            android:layout_height="wrap_content"-->
+    <!--            android:name="com.google.android.libraries.places.widget.AutocompleteSupportFragment"-->
+    <!--            android:layout_margin="5sp"-->
+    <!--            android:layout_gravity="center"-->
+    <!--            android:layout_weight="60"/>-->
+    <!--    </androidx.appcompat.widget.LinearLayoutCompat>-->
+
+    <!--    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton-->
+    <!--        android:id="@+id/help"-->
+    <!--        style="@style/Widget.MaterialComponents.FloatingActionButton"-->
+    <!--        android:layout_width="wrap_content"-->
+    <!--        android:layout_height="wrap_content"-->
+    <!--        android:layout_gravity="end|top"-->
+    <!--        android:layout_margin="15dp"-->
+    <!--        app:backgroundTint="@color/colorAccent"-->
+    <!--        app:icon="@drawable/ic_live_help_black_24dp"-->
+    <!--        app:iconTint="@color/normal"-->
+    <!--        app:layout_constraintEnd_toEndOf="parent"-->
+    <!--        app:layout_constraintTop_toBottomOf="@+id/search_area" />-->
+
+    <!--    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton-->
+    <!--        android:id="@+id/nearby_places"-->
+    <!--        style="@style/Widget.MaterialComponents.FloatingActionButton"-->
+    <!--        android:layout_width="wrap_content"-->
+    <!--        android:layout_height="wrap_content"-->
+    <!--        android:layout_gravity="end|top"-->
+    <!--        android:layout_margin="15dp"-->
+    <!--        app:backgroundTint="@color/colorAccent"-->
+    <!--        app:icon="@drawable/ic_map_marker_point"-->
+    <!--        app:iconTint="@color/normal"-->
+    <!--        app:layout_constraintEnd_toEndOf="parent"-->
+    <!--        app:layout_constraintTop_toBottomOf="@+id/help" />-->
+
+    <!--    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton-->
+    <!--        android:id="@+id/clean_map"-->
+    <!--        style="@style/Widget.MaterialComponents.FloatingActionButton"-->
+    <!--        android:layout_width="wrap_content"-->
+    <!--        android:layout_height="wrap_content"-->
+    <!--        android:layout_gravity="end|top"-->
+    <!--        android:layout_margin="15dp"-->
+    <!--        app:backgroundTint="@color/colorAccent"-->
+    <!--        app:icon="@drawable/ic_broom_com"-->
+    <!--        app:iconTint="@color/normal"-->
+    <!--        app:layout_constraintEnd_toEndOf="parent"-->
+    <!--        app:layout_constraintTop_toBottomOf="@+id/nearby_places" />-->
+
     <com.google.android.material.circularreveal.CircularRevealLinearLayout
         android:id="@+id/buttonGroup"
         android:layout_width="match_parent"
@@ -67,29 +103,19 @@
             android:layout_height="wrap_content"
             android:layout_margin="5dp"
             android:text="@string/logintext"
-            app:layout_constraintBottom_toTopOf="@+id/exit"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/exit"
-            android:layout_width="@dimen/login_button_width"
-            android:layout_height="wrap_content"
-            android:layout_margin="5dp"
-            android:text="@string/exittext"
-            app:layout_constraintBottom_toBottomOf="@+id/map"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
     </com.google.android.material.circularreveal.CircularRevealLinearLayout>
 
     <com.google.android.material.circularreveal.CircularRevealLinearLayout
         android:id="@+id/rootContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:background="#80D3D3D3"
-        android:visibility="gone"
+        android:background="@color/colorGreyF5"
         android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone"
         app:layout_constraintBottom_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

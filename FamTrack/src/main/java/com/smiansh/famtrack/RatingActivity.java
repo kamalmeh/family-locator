@@ -7,10 +7,11 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
-import android.widget.RatingBar;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+
+//import android.widget.RatingBar;
 
 public class RatingActivity extends AppCompatActivity {
 
@@ -18,21 +19,21 @@ public class RatingActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_rating);
-        final RatingBar simpleRatingBar = findViewById(R.id.ratingBar);
+//        final RatingBar simpleRatingBar = findViewById(R.id.ratingBar);
         Button submitButton = findViewById(R.id.submitRating);
         // perform click event on button
         submitButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                PrefManager sp = new PrefManager(getApplicationContext());
-                SharedPreferences.Editor ed = sp.pref.edit();
+                PrefManager prefManager = new PrefManager(getApplicationContext());
+                SharedPreferences.Editor ed = prefManager.getEditor();
                 ed.putBoolean("isRatingGiven", true).apply();
                 // get values and then displayed in a toast
-                String totalStars = "Total Stars:: " + simpleRatingBar.getNumStars();
-                String rating = "Rating :: " + simpleRatingBar.getRating();
+//                String totalStars = "Total Stars:: " + simpleRatingBar.getNumStars();
+//                String rating = "Rating :: " + simpleRatingBar.getRating();
 //                Toast.makeText(getApplicationContext(), totalStars + "\n" + rating, Toast.LENGTH_LONG).show();
 //                Uri uri = Uri.parse("market://details?id=" + getPackageName());
-                Uri uri = Uri.parse("http://play.google.com/store/apps/details?id=" + getPackageName() + "&rating=" + rating);
+                Uri uri = Uri.parse("http://play.google.com/store/apps/details?id=" + getPackageName());
                 Intent myAppLinkToMarket = new Intent(Intent.ACTION_VIEW, uri);
                 try {
                     startActivity(myAppLinkToMarket);

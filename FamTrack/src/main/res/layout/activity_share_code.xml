@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     tools:context=".ShareCodeActivity">
 
-    <LinearLayout
+    <androidx.appcompat.widget.LinearLayoutCompat
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
@@ -16,22 +16,19 @@
         ads:layout_constraintBottom_toTopOf="@+id/adView"
         ads:layout_constraintTop_toTopOf="parent">
 
-        <TextView
+        <com.google.android.material.textview.MaterialTextView
             android:id="@+id/authCode"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="15dp"
-            android:gravity="center"
+            android:layout_margin="15sp"
+            android:background="@color/colorGreyF5"
+            android:padding="5sp"
             android:text="@string/authcode_hint"
-            android:textAlignment="center"
-            android:textSize="50sp"
-            app:fontFamily="@font/advent_pro_bold"
-            app:layout_constraintBottom_toTopOf="@+id/authDesc"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:textSize="24sp"
+            android:gravity="center"
+            android:textStyle="bold" />
 
-        <TextView
+        <com.google.android.material.textview.MaterialTextView
             android:id="@+id/authDesc"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -42,7 +39,7 @@
             app:layout_constraintBottom_toTopOf="@+id/adView"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
-    </LinearLayout>
+    </androidx.appcompat.widget.LinearLayoutCompat>
 
     <com.google.android.gms.ads.AdView
         android:id="@+id/adView"

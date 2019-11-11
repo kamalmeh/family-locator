@@ -112,4 +112,10 @@
     <string name="show_me_button">Show Me</string>
     <string name="my_location">My Location</string>
     <string name="modify_the_address_if_you_want">Modify the Address if you want</string>
+    <string name="btn_find_family">Find Family</string>
+    <string name="btn_login">Login</string>
+    <string name="default_notification_channel_id">PUSH_NOTIFICATIONS</string>
+    <string name="msg_token_fmt">%s</string>
+    <string name="fcm_message">Safe Circle - %s</string>
+    <string name="phoneNumberUsagePolicy">User\'s information security is our top most priority. Please be assured, your phone number will not be shared to anyone. However, you can choose not to enter.</string>
 </resources>

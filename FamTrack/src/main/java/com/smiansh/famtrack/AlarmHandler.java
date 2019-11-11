@@ -70,7 +70,7 @@ public class AlarmHandler extends BroadcastReceiver {
     }
 
     PendingIntent getPendingIntent() {
-        Intent detectActivityService = new Intent(mContext, DetectActivityBroadcastReceiver.class);
+        Intent detectActivityService = new Intent(mContext, GlobalBroadcastReceiver.class);
         detectActivityService.setAction("com.smiansh.famtrack.action.DETECT_ACTIVITY");
         return PendingIntent.getBroadcast(mContext, 10, detectActivityService, PendingIntent.FLAG_UPDATE_CURRENT);
     }

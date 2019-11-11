@@ -78,7 +78,7 @@ public class BillingManager implements PurchasesUpdatedListener {
             }
         } else if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.USER_CANCELED) {
             // Handle an error caused by a user cancelling the purchase flow.
-            Toast.makeText(context, "User cancelled the payment", Toast.LENGTH_SHORT).show();
+//            Toast.makeText(context, "User cancelled the payment", Toast.LENGTH_SHORT).show();
             Log.i(TAG, "User cancelled the payment");
         } else {
             // Handle any other error codes.

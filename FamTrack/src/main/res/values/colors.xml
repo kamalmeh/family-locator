@@ -1,18 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!--    <color name="colorPrimary">#f49f30</color>-->
-    <!--    <color name="colorPrimaryDark">#bb8645</color>-->
-    <!--    <color name="colorAccent">#fdbd71</color>-->
-    <color name="colorPrimaryDark">#03A9F4</color>
-    <color name="colorPrimary">#64B5F6</color>
-    <color name="colorAccent">#FCBF30</color>
+    <color name="colorPrimary">#FFB03B</color>
+    <color name="colorPrimaryDark">#FF8C26</color>
+    <color name="colorAccent">#A0B03B</color>
+    <!--        <color name="colorAccent">#FDBD71</color>-->
+    <!--    <color name="colorPrimaryDark">#03A9F4</color>-->
+    <!--    <color name="colorPrimary">#64B5F6</color>-->
+    <!--    <color name="colorAccent">#FCBF30</color>-->
     <color name="windowBackground">#FFFFFF</color>
 
-    <color name="markerColor">@color/colorAccent</color>
+    <color name="markerColor">@color/colorPrimaryDark</color>
 
     <color name="requiredField">#F44336</color>
     <color name="normal">#FFFFFF</color>
-    <color name="colorGreyF5">#D3D3D3</color>
+    <color name="colorGreyF5">#80D3D3D3</color>
 
     <!-- Screens background color-->
     <color name="bg_screen1">@color/colorPrimary</color>
@@ -21,16 +22,16 @@
     <color name="bg_screen4">@color/colorPrimaryDark</color>
 
     <!-- dots inactive colors -->
-    <color name="dot_dark_screen1">@color/colorPrimary</color>
-    <color name="dot_dark_screen2">@color/colorPrimary</color>
-    <color name="dot_dark_screen3">@color/colorPrimary</color>
-    <color name="dot_dark_screen4">@color/colorPrimary</color>
+    <color name="dot_dark_screen1">@color/normal</color>
+    <color name="dot_dark_screen2">@color/normal</color>
+    <color name="dot_dark_screen3">@color/normal</color>
+    <color name="dot_dark_screen4">@color/normal</color>
 
     <!-- dots active colors -->
-    <color name="dot_light_screen1">@color/normal</color>
-    <color name="dot_light_screen2">@color/normal</color>
-    <color name="dot_light_screen3">@color/normal</color>
-    <color name="dot_light_screen4">@color/normal</color>
+    <color name="dot_light_screen1">@color/colorAccent</color>
+    <color name="dot_light_screen2">@color/colorPrimary</color>
+    <color name="dot_light_screen3">@color/colorAccent</color>
+    <color name="dot_light_screen4">@color/colorPrimary</color>
 
     <array name="array_dot_active">
         <item>@color/dot_light_screen1</item>

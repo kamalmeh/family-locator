@@ -14,7 +14,6 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
-import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.telephony.TelephonyManager;
@@ -22,16 +21,20 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.AppCompatImageButton;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -75,11 +78,32 @@ public class ProfileActivity extends AppCompatActivity {
     private FirebaseFirestore db = FirebaseFirestore.getInstance();
     private String userId;
     private SharedPreferences sp = null;
+    LinearLayout linearLayout;
     private Helper myHelper;
+    private PrefManager prefManager;
+    private boolean linearLayoutShow = true;
+    private AppCompatImageButton infoButton;
+    private View.OnClickListener infoButtonClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(ProfileActivity.this);
+            builder.setMessage(getString(R.string.phoneNumberUsagePolicy))
+                    .setTitle("Policy")
+                    .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+
+                        }
+                    })
+                    .create()
+                    .show();
+        }
+    };
 
     @Override
     protected void onPostResume() {
         super.onPostResume();
+        linearLayoutShow = true;
         getProfileData();
     }
 
@@ -212,22 +236,9 @@ public class ProfileActivity extends AppCompatActivity {
                     }
                     if (selectedCountryCode.length() == 0)
                         selectedCountryCode = ccp.getSelectedCountryCodeWithPlus();
-                    if (phone.getText().toString().length() > 0 && phone.getText().toString().length() != 10) {
-                        AlertDialog.Builder builder = new AlertDialog.Builder(ProfileActivity.this);
-                        builder.setMessage("Please enter 10 digit phone number")
-                                .setCancelable(false)
-                                .setPositiveButton("Back", new DialogInterface.OnClickListener() {
-                                    public void onClick(DialogInterface dialog, int id) {
-                                        dialog.dismiss();
-                                    }
-                                });
-                        AlertDialog alert = builder.create();
-                        alert.show();
-                        return;
-                    } else {
-                        String number = phone.getText().toString();
-                        if (number.length() == 10)
-                            data.put("phone", selectedCountryCode + "-" + number);
+                    String number = phone.getText().toString();
+                    if (number.length() > 0) {
+                        data.put("phone", selectedCountryCode + "-" + number);
                     }
                     if (!userData.containsKey("allowedMembers"))
                         data.put("allowedMembers", String.valueOf(Helper.ALLOWED_MEMBERS));
@@ -297,25 +308,29 @@ public class ProfileActivity extends AppCompatActivity {
                     // Permission was granted.
                     Log.i(TAG, "Permission was granted");
                 } else {
-                    Snackbar.make(
-                            findViewById(R.id.map),
-                            R.string.permission_denied_explanation,
-                            Snackbar.LENGTH_INDEFINITE)
-                            .setAction(R.string.settings, new View.OnClickListener() {
-                                @Override
-                                public void onClick(View view) {
-                                    // Build intent that displays the App settings screen.
-                                    Intent intent = new Intent();
-                                    intent.setAction(
-                                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                                    Uri uri = Uri.fromParts("package",
-                                            BuildConfig.APPLICATION_ID, null);
-                                    intent.setData(uri);
-                                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                    startActivity(intent);
-                                }
-                            })
-                            .show();
+                    try {
+                        Snackbar.make(
+                                findViewById(R.id.map),
+                                R.string.permission_denied_explanation,
+                                Snackbar.LENGTH_INDEFINITE)
+                                .setAction(R.string.settings, new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View view) {
+                                        // Build intent that displays the App settings screen.
+                                        Intent intent = new Intent();
+                                        intent.setAction(
+                                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                                        Uri uri = Uri.fromParts("package",
+                                                BuildConfig.APPLICATION_ID, null);
+                                        intent.setData(uri);
+                                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                        startActivity(intent);
+                                    }
+                                })
+                                .show();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         }
@@ -372,16 +387,16 @@ public class ProfileActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_profile);
         userId = getIntent().getStringExtra("userId");
-
         myHelper = new Helper(this);
         firstName = findViewById(R.id.firstName);
         lastName = findViewById(R.id.lastName);
         phone = findViewById(R.id.phone);
         update = findViewById(R.id.update);
-//        currUser = findViewById(R.id.currUser);
         addMember = findViewById(R.id.addMember);
         uploadImage = findViewById(R.id.profileImage);
         listView = findViewById(R.id.membersList);
+        infoButton = findViewById(R.id.infoButton);
+        listView.setEnabled(false);
         firstName.setEnabled(false);
         lastName.setEnabled(false);
         phone.setEnabled(false);
@@ -390,7 +405,11 @@ public class ProfileActivity extends AppCompatActivity {
         ccp = findViewById(R.id.ccp);
         ccp.setCcpClickable(false);
 
-        sp = PreferenceManager.getDefaultSharedPreferences(this);
+        infoButton.setOnClickListener(infoButtonClickListener);
+
+//        sp = PreferenceManager.getDefaultSharedPreferences(this);
+        prefManager = new PrefManager(this);
+        sp = prefManager.getApplicationDefaultSharedPreferences();
 
         int permission_read = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
         int permission_write = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
@@ -404,13 +423,27 @@ public class ProfileActivity extends AppCompatActivity {
                     PERMISSION_REQUEST);
         }
 
-        getProfileData();
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                 Toast.makeText(getBaseContext(), "Touch and Hold to delete", Toast.LENGTH_LONG).show();
             }
         });
+
+        if (linearLayoutShow) {
+            linearLayoutShow = false;
+            // Create progressBar dynamically...
+            ProgressBar progressBar = new ProgressBar(this);
+            progressBar.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+            linearLayout = findViewById(R.id.rootContainerProfile);
+            // Add ProgressBar to LinearLayout
+            if (linearLayout != null) {
+                linearLayout.addView(progressBar);
+                linearLayout.setVisibility(View.VISIBLE);
+            }
+        }
+        getProfileData();
     }
 
     private void getProfileData() {
@@ -418,6 +451,8 @@ public class ProfileActivity extends AppCompatActivity {
                 .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
                     @Override
                     public void onSuccess(DocumentSnapshot documentSnapshot) {
+                        linearLayout.removeAllViews();
+                        linearLayout.setVisibility(View.GONE);
                         if (documentSnapshot.exists()) {
                             userData = documentSnapshot.getData();
                             String fName = documentSnapshot.getString("firstName");
@@ -439,6 +474,7 @@ public class ProfileActivity extends AppCompatActivity {
                             if (membersList != null) {
                                 MembersListAdapter adapter = new MembersListAdapter(membersList);
                                 listView.setAdapter(adapter);
+                                listView.setEnabled(true);
                             }
                         }
                     }

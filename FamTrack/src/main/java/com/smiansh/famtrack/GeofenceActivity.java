@@ -12,7 +12,9 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -48,6 +50,100 @@ public class GeofenceActivity extends AppCompatActivity {
     private Button addPlace;
     private String newPlace;
     private Location location;
+    private boolean linearLayoutShow = true;
+    private LinearLayout linearLayout;
+    private View.OnClickListener addPlaceClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(GeofenceActivity.this);
+            LayoutInflater inflater = getLayoutInflater();
+            final View popupView = inflater.inflate(R.layout.add_place, (ViewGroup) findViewById(R.id.addPlaceActivity));
+            final EditText textAddress = popupView.findViewById(R.id.address);
+            final Spinner myplaces = popupView.findViewById(R.id.myplaces);
+            ArrayAdapter<CharSequence> dataAdapter = ArrayAdapter.createFromResource(GeofenceActivity.this, R.array.myplaces, android.R.layout.simple_spinner_dropdown_item);
+            dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            myplaces.setAdapter(dataAdapter);
+            myplaces.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                    newPlace = adapterView.getSelectedItem().toString();
+                }
+
+                @Override
+                public void onNothingSelected(AdapterView<?> adapterView) {
+
+                }
+            });
+            popupView.findViewById(R.id.mylocationbutton).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    final FusedLocationProviderClient client = LocationServices.getFusedLocationProviderClient(getApplicationContext());
+                    LocationRequest request = LocationRequest.create();
+                    request.setInterval(1000);
+                    request.setFastestInterval(1000);
+                    final LocationCallback locationCallback = new LocationCallback() {
+                        @Override
+                        public void onLocationResult(LocationResult locationResult) {
+                            super.onLocationResult(locationResult);
+                            location = locationResult.getLastLocation();
+                            Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
+                            List<Address> addressList;
+                            String address;
+                            try {
+                                addressList = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+                                if (addressList.size() > 0) {
+                                    address = addressList.get(0).getAddressLine(0);
+                                    TextView label = popupView.findViewById(R.id.label);
+                                    label.setVisibility(View.VISIBLE);
+                                    textAddress.setVisibility(View.VISIBLE);
+                                    textAddress.setText(address);
+                                    client.removeLocationUpdates(this);
+                                }
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    };
+                    client.requestLocationUpdates(request, locationCallback, null);
+                }
+            });
+            dialogBuilder.setView(popupView)
+                    .setPositiveButton("Add", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            final EditText address = popupView.findViewById(R.id.address);
+                            final GeoPoint geoPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
+                            Map<String, Object> data = new HashMap<>();
+                            data.put("name", myName);
+                            data.put("address", address.getText().toString());
+                            data.put("location", geoPoint);
+                            db.document("/users/" + userId + "/places/" + newPlace).set(data)
+                                    .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                        @Override
+                                        public void onSuccess(Void aVoid) {
+                                            Toast.makeText(GeofenceActivity.this, newPlace + "Added Successfully", Toast.LENGTH_SHORT).show();
+                                        }
+                                    })
+                                    .addOnFailureListener(new OnFailureListener() {
+                                        @Override
+                                        public void onFailure(@NonNull Exception e) {
+                                            e.printStackTrace();
+                                            Toast.makeText(GeofenceActivity.this, e.getMessage(), Toast.LENGTH_LONG).show();
+                                        }
+                                    });
+                            getMyPlaces();
+                        }
+                    })
+                    .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            getMyPlaces();
+                        }
+                    })
+                    .create()
+                    .show();
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,108 +156,34 @@ public class GeofenceActivity extends AppCompatActivity {
                     @Override
                     public void onSuccess(DocumentSnapshot documentSnapshot) {
                         myName = documentSnapshot.getString("firstName");
-                        myName = myName.concat(" " + documentSnapshot.getString("lastName"));
+                        if (myName != null) {
+                            myName = myName.concat(" " + documentSnapshot.getString("lastName"));
+                        }
                     }
                 });
-        addPlace.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(GeofenceActivity.this);
-                LayoutInflater inflater = getLayoutInflater();
-                final View popupView = inflater.inflate(R.layout.add_place, (ViewGroup) findViewById(R.id.addPlaceActivity));
-                final EditText textAddress = popupView.findViewById(R.id.address);
-                final Spinner myplaces = popupView.findViewById(R.id.myplaces);
-                ArrayAdapter<CharSequence> dataAdapter = ArrayAdapter.createFromResource(GeofenceActivity.this, R.array.myplaces, android.R.layout.simple_spinner_dropdown_item);
-                dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                myplaces.setAdapter(dataAdapter);
-                myplaces.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-                    @Override
-                    public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                        newPlace = adapterView.getSelectedItem().toString();
-                    }
+        addPlace.setOnClickListener(addPlaceClickListener);
 
-                    @Override
-                    public void onNothingSelected(AdapterView<?> adapterView) {
+        if (linearLayoutShow) {
+            linearLayoutShow = false;
+            // Create progressBar dynamically...
+            ProgressBar progressBar = new ProgressBar(this);
+            progressBar.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-                    }
-                });
-                popupView.findViewById(R.id.mylocationbutton).setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        final FusedLocationProviderClient client = LocationServices.getFusedLocationProviderClient(getApplicationContext());
-                        LocationRequest request = LocationRequest.create();
-                        request.setInterval(1000);
-                        request.setFastestInterval(1000);
-                        final LocationCallback locationCallback = new LocationCallback() {
-                            @Override
-                            public void onLocationResult(LocationResult locationResult) {
-                                super.onLocationResult(locationResult);
-                                location = locationResult.getLastLocation();
-                                Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
-                                List<Address> addressList;
-                                String address;
-                                try {
-                                    addressList = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
-                                    if (addressList.size() > 0) {
-                                        address = addressList.get(0).getAddressLine(0);
-                                        TextView label = popupView.findViewById(R.id.label);
-                                        label.setVisibility(View.VISIBLE);
-                                        textAddress.setVisibility(View.VISIBLE);
-                                        textAddress.setText(address);
-                                        client.removeLocationUpdates(this);
-                                    }
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                        };
-                        client.requestLocationUpdates(request, locationCallback, null);
-                    }
-                });
-                dialogBuilder.setView(popupView)
-                        .setPositiveButton("Add", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                final EditText address = popupView.findViewById(R.id.address);
-                                final GeoPoint geoPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
-                                Map<String, Object> data = new HashMap<>();
-                                data.put("name", myName);
-                                data.put("address", address.getText().toString());
-                                data.put("location", geoPoint);
-                                db.document("/users/" + userId + "/places/" + newPlace).set(data)
-                                        .addOnSuccessListener(new OnSuccessListener<Void>() {
-                                            @Override
-                                            public void onSuccess(Void aVoid) {
-                                                Toast.makeText(GeofenceActivity.this, newPlace + "Added Successfully", Toast.LENGTH_SHORT).show();
-                                            }
-                                        })
-                                        .addOnFailureListener(new OnFailureListener() {
-                                            @Override
-                                            public void onFailure(@NonNull Exception e) {
-                                                e.printStackTrace();
-                                                Toast.makeText(GeofenceActivity.this, e.getMessage(), Toast.LENGTH_LONG).show();
-                                            }
-                                        });
-                                getMyPlaces();
-                            }
-                        })
-                        .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                getMyPlaces();
-                            }
-                        })
-                        .create()
-                        .show();
+            linearLayout = findViewById(R.id.rootContainer);
+            // Add ProgressBar to LinearLayout
+            if (linearLayout != null) {
+                linearLayout.addView(progressBar);
+                linearLayout.setVisibility(View.VISIBLE);
             }
-        });
-
+        }
         getMyPlaces();
     }
 
     @Override
     protected void onPostResume() {
         super.onPostResume();
+        addPlace.setOnClickListener(addPlaceClickListener);
+        linearLayoutShow = true;
         getMyPlaces();
     }
 
@@ -181,6 +203,8 @@ public class GeofenceActivity extends AppCompatActivity {
                         } catch (NullPointerException e) {
                             e.printStackTrace();
                         }
+                        linearLayout.removeAllViews();
+                        linearLayout.setVisibility(View.GONE);
                     }
                 })
                 .addOnFailureListener(new OnFailureListener() {

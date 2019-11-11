@@ -19,6 +19,7 @@ public class ShareCodeActivity extends AppCompatActivity {
 //        Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
         String authCodeText = getIntent().getStringExtra("authCode");
         TextView authCode = findViewById(R.id.authCode);
+        authCode.setLetterSpacing(Float.parseFloat("0.3"));
         authCode.setText(authCodeText);
         Helper myHelper = new Helper(this);
         if (!licencedProduct) {

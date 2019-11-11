@@ -3,35 +3,57 @@ package com.smiansh.famtrack;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-public class PrefManager {
+class PrefManager {
+    static final String IS_FIRST_TIME_LAUNCH = "IsFirstTimeLaunch";
     // Shared preferences file name
-    public static final String PREF_NAME = "safecircle-welcome";
-    public static final String IS_FIRST_TIME_LAUNCH = "IsFirstTimeLaunch";
-    public static final String IS_RATING_GIVEN = "isRatingGiven";
-    SharedPreferences pref;
+    private static final String PREF_NAME = "SAFE_CIRCLE_DEFAULT_PREFERENCE";
+    private static final String IS_RATING_GIVEN = "isRatingGiven";
+    private SharedPreferences applicationDefaultSharedPreferences;
     SharedPreferences.Editor editor;
-    Context _context;
-    // shared pref mode
-    int PRIVATE_MODE = 0;
+    private Context _context;
 
-    public PrefManager(Context context) {
-        this._context = context;
-        pref = _context.getSharedPreferences(PREF_NAME, PRIVATE_MODE);
-        editor = pref.edit();
+    PrefManager(Context context) {
+        setContext(context);
+        setApplicationDefaultSharedPreferences();
+        setEditor();
+    }
+
+    private void setEditor() {
+        editor = getApplicationDefaultSharedPreferences().edit();
         editor.apply();
     }
 
-    public void resetFirstTimeLaunch() {
+    SharedPreferences.Editor getEditor() {
+        return this.editor;
+    }
+
+    Context getContext() {
+        return this._context;
+    }
+
+    private void setContext(Context context) {
+        this._context = context;
+    }
+
+    SharedPreferences getApplicationDefaultSharedPreferences() {
+        return this.applicationDefaultSharedPreferences;
+    }
+
+    private void setApplicationDefaultSharedPreferences() {
+        this.applicationDefaultSharedPreferences = _context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+    }
+
+    void enableFirstTimeLaunch() {
         editor.remove(IS_FIRST_TIME_LAUNCH).apply();
         editor.remove(IS_RATING_GIVEN).apply();
     }
 
-    public boolean isFirstTimeLaunch() {
-        return pref.getBoolean(IS_FIRST_TIME_LAUNCH, true);
+    boolean isFirstTimeLaunch() {
+        return this.applicationDefaultSharedPreferences.getBoolean(IS_FIRST_TIME_LAUNCH, true);
     }
 
-    public void setFirstTimeLaunch(boolean isFirstTime) {
-        editor.putBoolean(IS_FIRST_TIME_LAUNCH, isFirstTime);
+    void disableFirstTimeLaunch() {
+        editor.putBoolean(IS_FIRST_TIME_LAUNCH, false);
         editor.commit();
     }
 

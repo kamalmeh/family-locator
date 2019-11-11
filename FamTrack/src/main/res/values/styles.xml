@@ -24,4 +24,8 @@
         <item name="android:background">@drawable/screen_style1</item>
     </style>
 
+    <style name="RoundedEditText">
+        <item name="android:background">@drawable/rounded_corners</item>
+    </style>
+
 </resources>

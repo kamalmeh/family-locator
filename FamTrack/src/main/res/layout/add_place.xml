@@ -4,13 +4,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:gravity="center"
-    android:layout_margin="10dp"
     android:orientation="vertical">
 
     <androidx.appcompat.widget.LinearLayoutCompat
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
+        android:paddingTop="15dp"
         android:orientation="horizontal">
 
         <com.google.android.material.textview.MaterialTextView
@@ -21,7 +21,7 @@
             android:text="@string/my_location"
             android:textSize="24sp" />
 
-        <ImageButton
+        <androidx.appcompat.widget.AppCompatImageButton
             android:id="@+id/mylocationbutton"
             android:layout_width="60dp"
             android:layout_height="60dp"
@@ -31,19 +31,23 @@
 
     </androidx.appcompat.widget.LinearLayoutCompat>
 
-    <EditText
-        android:id="@+id/address"
+    <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top|start"
-        android:layout_margin="10dp"
-        android:hint="@string/enter_the_address"
-        android:inputType="textCapSentences|textMultiLine"
-        android:lines="5"
-        android:scrollHorizontally="false"
-        android:importantForAutofill="no"
-        android:text="@string/enter"
-        android:visibility="gone" />
+        android:layout_height="wrap_content">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/address"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|start"
+            android:layout_margin="10dp"
+            android:hint="@string/enter_the_address"
+            android:importantForAutofill="no"
+            android:inputType="textCapSentences|textMultiLine"
+            android:lines="5"
+            android:scrollHorizontally="false"
+            android:text="@string/enter" />
+    </com.google.android.material.textfield.TextInputLayout>
 
     <Spinner
         android:id="@+id/myplaces"
@@ -53,7 +57,7 @@
         android:background="@color/colorGreyF5"
         android:dropDownSelector="@drawable/ic_my_location_black_24dp" />
 
-    <TextView
+    <com.google.android.material.textview.MaterialTextView
         android:id="@+id/label"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

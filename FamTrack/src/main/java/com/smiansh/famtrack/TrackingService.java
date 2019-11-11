@@ -15,7 +15,6 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.IBinder;
-import android.preference.PreferenceManager;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -55,7 +54,7 @@ import javax.annotation.Nullable;
 
 public class TrackingService extends Service {
     //    Class Variable Declaration
-    private static final String TAG = "Tracking Service";
+    private static final String TAG = "TRACKING_SERVICE";
     public static final int EMEARGENCY_MESSAGE_ID = 2;
     private static final float GEOFENCE_RADIUS_IN_METERS = 100;
     private LocationRequest mLocationRequest;
@@ -63,6 +62,7 @@ public class TrackingService extends Service {
     private FusedLocationProviderClient client;
     private String userId = FirebaseAuth.getInstance().getUid();
     private SimpleDateFormat sd;
+    private PrefManager prefManager;
     private SharedPreferences sp;
     private Helper myHelper;
     private Double lastLocationLat = 0.0;
@@ -250,17 +250,14 @@ public class TrackingService extends Service {
         return myNotification;
     }
 
-    void sendNotification(int id, Notification notification) {
-        notificationManager.notify(id, notification);
-    }
-
     @Override
     public void onCreate() {
         super.onCreate();
         myHelper = new Helper(getApplicationContext());
         startForeground(Helper.NOTIFICATION_SERVICE_ID, myHelper.getNotification(activity));
         sd = new SimpleDateFormat(getString(R.string.date_format), Locale.getDefault());
-        sp = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        prefManager = new PrefManager(getApplicationContext());
+        sp = prefManager.getApplicationDefaultSharedPreferences();
         try {
             lastLocationLat = Double.parseDouble(sp.getString("Latitude", "1"));
             lastLocationLong = Double.parseDouble(sp.getString("Longitude", "1"));
@@ -387,7 +384,7 @@ public class TrackingService extends Service {
                         String read = documentSnapshot.getString("read");
                         if (geoPoint != null) {
                             if (read != null && read.equals("no"))
-                                sendNotification(EMEARGENCY_MESSAGE_ID, getNotification("Emergency Message", sender, msg, geoPoint
+                                myHelper.sendNotification(EMEARGENCY_MESSAGE_ID, getNotification("Emergency Message", sender, msg, geoPoint
                                         , address));
                         }
                     }

@@ -24,11 +24,11 @@ import androidx.viewpager.widget.ViewPager;
 public class WelcomeActivity extends FragmentActivity {
 
     private ViewPager viewPager;
-    private MyViewPagerAdapter myViewPagerAdapter;
     private LinearLayout dotsLayout;
-    private TextView[] dots;
     private int[] layouts;
     private Button btnSkip, btnNext;
+    private SharedPreferences mySharedPreferences;
+    private SharedPreferences.Editor mySharedPreferencesEditor;
     //  viewpager change listener
     ViewPager.OnPageChangeListener viewPagerPageChangeListener = new ViewPager.OnPageChangeListener() {
 
@@ -66,6 +66,8 @@ public class WelcomeActivity extends FragmentActivity {
 
         // Checking for first time launch - before calling setContentView()
         prefManager = new PrefManager(this);
+        mySharedPreferences = prefManager.getApplicationDefaultSharedPreferences();
+        mySharedPreferencesEditor = prefManager.getEditor();
         runUpdatesIfNecessary();
         if (!prefManager.isFirstTimeLaunch()) {
             launchHomeScreen();
@@ -99,7 +101,7 @@ public class WelcomeActivity extends FragmentActivity {
         // making notification bar transparent
         changeStatusBarColor();
 
-        myViewPagerAdapter = new MyViewPagerAdapter();
+        MyViewPagerAdapter myViewPagerAdapter = new MyViewPagerAdapter();
         viewPager.setAdapter(myViewPagerAdapter);
         viewPager.addOnPageChangeListener(viewPagerPageChangeListener);
 
@@ -134,14 +136,13 @@ public class WelcomeActivity extends FragmentActivity {
             e.printStackTrace();
         }
 
-        if (prefManager.pref.getInt("lastUpdate", 0) != versionCode) {
+        if (mySharedPreferences.getInt("lastUpdate", 0) != versionCode) {
             try {
-                prefManager.resetFirstTimeLaunch();
+                prefManager.enableFirstTimeLaunch();
 
                 // Commiting in the preferences, that the update was successful.
-                SharedPreferences.Editor editor = prefManager.pref.edit();
-                editor.putInt("lastUpdate", versionCode);
-                editor.apply();
+                mySharedPreferencesEditor.putInt("lastUpdate", versionCode);
+                mySharedPreferencesEditor.apply();
             } catch (Throwable t) {
                 // update failed, or cancelled
             }
@@ -149,7 +150,7 @@ public class WelcomeActivity extends FragmentActivity {
     }
 
     private void addBottomDots(int currentPage) {
-        dots = new TextView[layouts.length];
+        TextView[] dots = new TextView[layouts.length];
 
         int[] colorsActive = getResources().getIntArray(R.array.array_dot_active);
         int[] colorsInactive = getResources().getIntArray(R.array.array_dot_inactive);
@@ -172,8 +173,8 @@ public class WelcomeActivity extends FragmentActivity {
     }
 
     private void launchHomeScreen() {
-        prefManager.setFirstTimeLaunch(false);
-        boolean isFromMapView = prefManager.pref.getBoolean("fromMapView", false);
+        prefManager.disableFirstTimeLaunch();
+        boolean isFromMapView = mySharedPreferences.getBoolean("fromMapView", false);
         if (isFromMapView)
             prefManager.editor.remove("fromMapView").apply();
         else
@@ -196,14 +197,13 @@ public class WelcomeActivity extends FragmentActivity {
      * View pager adapter
      */
     public class MyViewPagerAdapter extends PagerAdapter {
-        private LayoutInflater layoutInflater;
 
-        public MyViewPagerAdapter() {
+        MyViewPagerAdapter() {
         }
 
         @Override
         public Object instantiateItem(ViewGroup container, int position) {
-            layoutInflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+            LayoutInflater layoutInflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 
             View view = layoutInflater.inflate(layouts[position], container, false);
             container.addView(view);

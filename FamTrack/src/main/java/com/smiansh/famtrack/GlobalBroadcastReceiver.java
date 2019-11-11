@@ -12,7 +12,7 @@ import com.google.android.gms.location.DetectedActivity;
 
 import java.util.ArrayList;
 
-public class DetectActivityBroadcastReceiver extends BroadcastReceiver {
+public class GlobalBroadcastReceiver extends BroadcastReceiver {
     public static final String ACTION_DETECT = "com.smiansh.famtrack.action.DETECT_ACTIVITY";
     public static final String ACTION_PANIC = "com.smiansh.famtrack.action.PANIC_ACTION";
     public static final String ACTION_PANIC_MSG_SENT = "com.smiansh.famtrack.action.PANIC_MSG_SENT";
@@ -22,7 +22,6 @@ public class DetectActivityBroadcastReceiver extends BroadcastReceiver {
 
     public void startTrackingService(long requestInterval, String activity) {
         Intent trackingService = new Intent(mContext, TrackingService.class);
-//        mContext.stopService(trackingService);
         trackingService.putExtra("requestInterval", requestInterval);
         trackingService.putExtra("activity", activity);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -101,7 +100,7 @@ public class DetectActivityBroadcastReceiver extends BroadcastReceiver {
                 }
             } else if (ACTION_PANIC.equals(action)) {
                 Log.i(TAG, "Panic Action received.");
-                myHelper.sendSMS("Please Help!!!");
+                myHelper.sendMessage("Please Help!!!");
             } else if (ACTION_PANIC_MSG_SENT.equals(action)) {
                 Log.i(TAG, "Panic Message Sent");
                 Toast.makeText(context, "Message Sent", Toast.LENGTH_SHORT).show();
